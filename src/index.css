@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 200 10% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 10% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 10% 20%;
+   
+    /*verde*/ 
+    --primary: 146 49% 36%;
+    --primary-foreground: 0 0% 100%;
+
+    /*verde claro*/ 
+    --secondary: 92 56% 70%;
+    --secondary-foreground: 0 0% 0%;
+
+    
+    --muted: 140 10% 93%;
+    --muted-foreground: 200 5% 46%;
+
+    /*azul*/ 
+    --accent: 202 74% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 140 10% 87%;
+    --input: 140 10% 87%;
+    --ring: 146 49% 36%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 200 10% 20%;
+    --sidebar-primary: 146 49% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 202 74% 39%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 140 10% 87%;
+    --sidebar-ring: 146 49% 36%;
+
+    --hero-gradient: linear-gradient(135deg, hsl(146 49% 36%) 0%, hsl(146 49% 36% / 0.7) 50%, transparent 100%);
+    --shadow-card: 0 4px 24px -4px hsl(146 49% 36% / 0.08);
+    --shadow-elevated: 0 8px 32px -8px hsl(146 49% 36% / 0.12);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius);
+  z-index: 1;
+}
