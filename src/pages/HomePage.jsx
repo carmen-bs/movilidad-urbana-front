@@ -5,7 +5,6 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import RoutesPanel from "@/components/RoutesPanel";
 import { useApi } from "@/hooks/useApi";
-import AccessDenied from "@/pages/AccessDenied";
 import { Car, Footprints, Bike, BusFront } from "lucide-react";
 
 
@@ -13,23 +12,16 @@ const HomePage = () => {
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
 
-  // usuario con acceso a la web/mapa
-  const [hasAccess, setHasAccess] = useState(null);
-  const [accessLoading, setAccessLoading] = useState(true);
-
   const [places, setPlaces] = useState([]);
   const [apiError, setApiError] = useState("");
   const [zones, setZones] = useState([]);
   const [isDrawingZone, setIsDrawingZone] = useState(false);
   const [tempZone, setTempZone] = useState([]);
-  const [serviceType, setServiceType] = useState([]);
   const [routeMode, setRouteMode] = useState("drive");
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [routeResult, setRouteResult] = useState(null);
   const [selectedPlaceIds, setSelectedPlaceIds] = useState([]);
   
-  // ciudades/ zonas que el usuario tiene acceso
-  const [allowedZones, setAllowedZones] = useState([]);
 
   /** Estado del bloque de itinerarios:
    * - lista de itinerarios
@@ -48,24 +40,7 @@ const HomePage = () => {
   // Ciudad actualmente seleccionada en el panel.
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedRouteDate, setSelectedRouteDate] = useState("");
-  // Comprbar el acceso desde el back y zonas permitidas
-  useEffect(() => {
-  async function checkAccess() {
-    try {
-      const data = await fetchApi("/me/access", {}, true);
-      setHasAccess(data.access);
-      setAllowedZones(data.allowedZones || []);
-      setServiceType(data.serviceType || []);
-      
-    } catch (error) {
-      console.error("Error comprobando acceso:", error);
-      setHasAccess(false);
-    } finally {
-      setAccessLoading(false);
-    }
-  }
-  checkAccess();
-}, [fetchApi]);
+  
 
 // cargar itinerarios desde el back segun fecha, hora, ciudad y modos
 const loadItineraries = async (date, time, modes, selectedPlaceIds) => {
@@ -250,37 +225,11 @@ if (!segments.length) {
       }
     }
 
-    if (hasAccess) {
       cargarPlaces();
-    }
-  }, [fetchApi, hasAccess]);
+  }, [fetchApi]);
 
-  /** 
-   * Muestra ciudad permitida para usuario y seleciona 
-   * Si tiene acceso a todas ("*"), mantiene la lista completa
-   * Si la ciudad actual no está permitida, se cambia a la primera disponible
-   */
+  
   useEffect(() => {
-    if (!allowedZones || allowedZones.length === 0) return;
-
-    const allCities = ["alicante", "elche", "valencia", "peñiscola"];
-
-    const availableCities = allowedZones.includes("*")
-      ? allCities
-      : allCities.filter((city) =>
-          allowedZones.some((zone) => zone.toLowerCase() === city.toLowerCase())
-        );
-
-    if (availableCities.length === 0) return;
-
-    if (selectedCity && !availableCities.includes(selectedCity)) {
-      setSelectedCity("");
-    }
-  }, [allowedZones, selectedCity]);
-
-  useEffect(() => {
-    if (!hasAccess) return;
-
     const selZoneKey = `selectedZone:${authUser}`;
     const selZone = loadJSON(selZoneKey, null);
 
@@ -289,7 +238,7 @@ if (!segments.length) {
       setZones([{ points: selZone.points }]);
       localStorage.removeItem(selZoneKey);
     }
-  }, [authUser, hasAccess]);
+  }, [authUser]);
 
 // Hace reverse geocoding sobre una coordenada para mostrar información legible
 // cuando el usuario pulsa sobre un punto libre del mapa
@@ -382,23 +331,6 @@ const getPointInfo = async (lat, lng) => {
     : [];
 
 
-  // Pantalla carga mientras se valida el acceso del usuario
-  if (accessLoading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <p className="text-sm text-muted-foreground">Comprobando acceso...</p>
-    </div>
-  );
-}
-
-  // Si no tiene acceso, se muestra la pantalla de acceso denegado
-  if (!hasAccess) {
-    return <AccessDenied />;
-  }
-  if (!serviceType.includes("itinerarios")) {
-    return <AccessDenied />;
-  }
-
   const handleChangeCity = (city) => {
     setSelectedCity(city);
     setSelectedPlaceIds([]);
@@ -450,7 +382,6 @@ const getPointInfo = async (lat, lng) => {
           <RoutesPanel
             selectedCity={selectedCity}
             onChangeCity={handleChangeCity}
-            allowedZones={allowedZones}
             itineraries={itineraries}
             itineraryLegs={itineraryLegs}
             itinerariesLoading={itinerariesLoading}
@@ -473,8 +404,7 @@ const getPointInfo = async (lat, lng) => {
             tempZone={tempZone}
             isDrawingZone={isDrawingZone}
             onMapClick={handleMapClick}
-            onLoadPlaceHours={getPlaceHours}
-            allowedZones={allowedZones} 
+            onLoadPlaceHours={getPlaceHours} 
             itineraryStops={itineraryStops}
             selectedCity={selectedCity}
             selectedDate={selectedRouteDate}

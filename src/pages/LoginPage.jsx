@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useApi } from "@/hooks/useApi";
+// import { useApi } from "@/hooks/useApi";
 import fondoCiudad from "@/assets/fondo1-mobility.png";
 import logo from "@/assets/logo-mobility.png";
 import tituloMovilidad from "@/assets/titulo-mobility.png";
@@ -11,9 +11,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { fetchApi } = useApi();
+ // const { fetchApi } = useApi();
 
-  const handleFirebaseLogin = async () => {
+ // Función para manejar el inicio de sesión con Firebase, con acceso o no de los usuarios.
+  /*const handleFirebaseLogin = async () => {
     setLoading(true);
     setError("");
 
@@ -39,7 +40,32 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  };*/
+
+  // Funcion inicio de sesion, sin limataciones de acceso a usuarios 
+  const handleFirebaseLogin = async () => {
+  setLoading(true);
+  setError("");
+
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const token = await result.user.getIdToken(true);
+
+    localStorage.setItem("firebaseToken", token);
+    localStorage.setItem(
+      "user",
+      result.user.email || result.user.uid
+    );
+
+    navigate("/mapa");
+  } catch (err) {
+    console.error("Error durante el inicio de sesión:", err);
+    setError("Error en login: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
  return (
   <div
@@ -82,7 +108,7 @@ const LoginPage = () => {
           </h2>
 
           <p className="text-sm text-gray-500 mt-1">
-            Regístrate con tu cuenta corporativa de Google.
+            Accede rápidamente con tu cuenta de Google.
           </p>
         </div>
 
@@ -97,12 +123,12 @@ const LoginPage = () => {
             alt="Google"
             className="w-5 h-5"
           />
-          {loading ? "Cargando..." : "Registrarse con Google"}
+          {loading ? "Cargando..." : "Iniciar sesión con Google"}
         </button>
 
         {/* texto legal */}
         <p className="text-xs text-gray-500 text-center">
-          Es necesario disponer de una cuenta corporativa{" "}
+          Inicia sesión para acceder a la plataforma.{" "}
           <span className="font-semibold text-gray-700">autorizada</span>.
         </p>
 

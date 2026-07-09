@@ -14,12 +14,12 @@ export function AuthProvider({ children }) {
       if (user) {
         const idToken = await user.getIdToken();
         setUser(user);
-        localStorage.setItem('token', idToken);  // Para fetch
+        localStorage.setItem("firebaseToken", idToken); // Para fetch
         setToken(idToken);
       } else {
         setUser(null);
         setToken(null);
-        localStorage.removeItem('token');
+        localStorage.removeItem("firebaseToken");
       }
       setLoading(false);  
     });

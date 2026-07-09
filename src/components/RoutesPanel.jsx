@@ -24,7 +24,7 @@ const MODE_LABELS = {
   * permite elegir ciudad, modos, fecha y hora
   * lanza la búsqueda de itinerarios
  */
-const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds, onChangeRouteDate, }) => {
+const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds, onChangeRouteDate, }) => {
   const [modes, setModes] = useState(["good"]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -75,16 +75,6 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
     { value: "valencia", label: "Valencia" },
     { value: "peñiscola", label: "Peñíscola" },
   ];
-
-  // Ciudades que se mostrarán en el desplegable según lo contratado
-  const availableCities =
-    allowedZones?.includes("*")
-      ? ALL_CITIES
-      : ALL_CITIES.filter((city) =>
-          allowedZones?.some(
-            (zone) => zone.toLowerCase() === city.value.toLowerCase()
-          )
-        );
   
   const normalizeText = (text = "") =>
   text
@@ -231,7 +221,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
               Selecciona destino
             </option>
             
-            {availableCities.map((city) => (
+            {ALL_CITIES.map((city) => (
               <option key={city.value} value={city.value}>
                 {city.label}
               </option>
