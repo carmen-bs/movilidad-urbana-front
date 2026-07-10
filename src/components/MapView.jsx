@@ -206,9 +206,9 @@ const MapView = ({
 
   const CITY_VIEWS = {
     alicante: { center: [38.3452, -0.481], zoom: 13 },
-    elche: { center: [38.2699, -0.7126], zoom: 13 },
+    javea: { center: [38.7890, 0.1661], zoom: 13 },
     valencia: { center: [39.4699, -0.3763], zoom: 13 },
-    peñiscola: { center: [40.3574, 0.4069], zoom: 13 },
+    torrevieja: { center: [37.9787, -0.6822], zoom: 13 },
   };
 
   //mover el mapa 
@@ -254,7 +254,7 @@ useEffect(() => {
   const map = mapRef.current;
   if (!map) return;
 
-  const cities = ["alicante", "elche", "valencia", "peñiscola"];
+  const cities = ["alicante", "javea", "valencia", "torrevieja"];
     let graphLayers = [];
 
   const loadGraphs = async () => {
@@ -323,7 +323,7 @@ useEffect(() => {
     marker.bindPopup(`
       <div>
         <strong>${place.name || "Lugar"}</strong><br/>
-        ${place.category || ""}<br/>
+        ${place.description || ""}<br/>
         <span style="color:#666;">Cargando horarios...</span>
       </div>
     `);
@@ -335,7 +335,7 @@ useEffect(() => {
       marker.setPopupContent(`
         <div>
           <strong>${place.name || "Lugar"}</strong><br/>
-          ${place.category || ""}<br/><br/>
+          ${place.description || ""}<br/><br/>
           <strong>Horarios:</strong>
           ${hoursHtml}
         </div>

@@ -71,9 +71,9 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
   // Lista completa de ciudades disponibles en la app
   const ALL_CITIES = [
     { value: "alicante", label: "Alicante" },
-    { value: "elche", label: "Elche" },
+    { value: "javea", label: "Jávea" },
     { value: "valencia", label: "Valencia" },
-    { value: "peñiscola", label: "Peñíscola" },
+    { value: "torrevieja", label: "Torrevieja" },
   ];
   
   const normalizeText = (text = "") =>
@@ -84,7 +84,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
 
   // Lugares de la ciudad seleccionada
   const cityPlaces = (places || []).filter((place) =>
-    normalizeText(place.name).includes(normalizeText(selectedCity))
+    normalizeText(place.city_id) === normalizeText(selectedCity)
   );
 
   //marcar o desmarcar lugar de ciudad
@@ -321,7 +321,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
                   const firstPlace = (places || []).find(
                     (p) => p.name?.toLowerCase().trim() === firstStopName?.toLowerCase().trim()
                   );
-                  const imageUrl = firstPlace?.image_url  || firstPlace?.img || "/placeholder-place.jpg";
+                  const imageUrl = firstPlace?.img_url || "/placeholder-place.jpg";                  
                   
                   const durationText =
                     hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;

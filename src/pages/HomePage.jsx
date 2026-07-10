@@ -485,7 +485,7 @@ const getPointInfo = async (lat, lng) => {
                     {/* IMG */}
                     <div className="relative">
                       <img
-                        src={place?.img || "/placeholder-place.jpg"}
+                        src={place?.img_url || "/placeholder-place.jpg"}
                         className="w-full h-20 rounded-lg object-cover"
                       />
 
