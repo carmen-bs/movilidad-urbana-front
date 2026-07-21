@@ -115,74 +115,197 @@ function mergeRanges(ranges) {
   return merged;
 }
 
-// Comprueba si un horario es válido para la fecha actual
-function isDateInRange(validFrom, validTo) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// Convierte selectedDate en una fecha local sin problemas de zona horaria
+function parseLocalDate(value) {
+  if (!value) return new Date();
 
-  // Si no hay rango de fechas, se considera siempre válido
-  if (!validFrom && !validTo) return true;
+  if (value instanceof Date) {
+    return value;
+  }
 
-  const from = validFrom ? new Date(validFrom) : null;
-  const to = validTo ? new Date(validTo) : null;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
 
-  // normaliza fechas
-  if (from) from.setHours(0, 0, 0, 0);
-  if (to) to.setHours(0, 0, 0, 0);
+  if (match) {
+    const [, year, month, day] = match;
 
-  // fuera de rango → no válido
-  if (from && today < from) return false;
-  if (to && today > to) return false;
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day)
+    );
+  }
 
-  return true;
+  return new Date(value);
 }
 
-// Genera el texto de horarios visibles en el popup para el día actual
+
+// Devuelve una fecha en formato MM-DD
+function getMonthDay(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${month}-${day}`;
+}
+
+
+// Comprueba si la fecha pertenece a una temporada anual.
+// También permite temporadas que cruzan el cambio de año:
+// 11-15 → 02-27
+function isDateInRange(date, validFrom, validTo) {
+  if (!validFrom || !validTo) {
+    return true;
+  }
+
+  const currentMonthDay = getMonthDay(date);
+
+  // Temporada dentro del mismo año
+  if (validFrom <= validTo) {
+    return (
+      currentMonthDay >= validFrom &&
+      currentMonthDay <= validTo
+    );
+  }
+
+  // Temporada que cruza el cambio de año
+  return (
+    currentMonthDay >= validFrom ||
+    currentMonthDay <= validTo
+  );
+}
+
+
+// Comprueba si el día está incluido en el array dow
+function isDowValid(dow, currentDow) {
+  if (Array.isArray(dow)) {
+    return dow.includes(currentDow);
+  }
+
+  // Compatibilidad con posibles datos antiguos
+  if (dow === null || dow === undefined) {
+    return true;
+  }
+
+  return Number(dow) === currentDow;
+}
+
+
+// Genera el texto de horarios visibles en el popup
 function formatTodayPlaceHours(hours, selectedDate) {
-  if (!hours || hours.length === 0) {
+  if (!Array.isArray(hours) || hours.length === 0) {
     return "<div>Sin horarios disponibles</div>";
   }
 
-  const dateToUse = selectedDate ? new Date(selectedDate) : new Date();
-  const jsDay = dateToUse.getDay();
-  const currentDow = jsDay === 0 ? 6 : jsDay - 1;
+  const dateToUse = parseLocalDate(selectedDate);
+  const currentDow = (dateToUse.getDay() + 6) % 7;
+  const currentMonthDay = getMonthDay(dateToUse);
 
-  // Filtra solo los horarios del día actual y válidos por fecha
-  const todayHours = hours.filter(
-    (h) => h.dow === currentDow && isDateInRange(h.valid_from, h.valid_to)
+  const dateLabel = selectedDate ? "Ese día" : "Hoy";
+
+  // Horarios correspondientes a la temporada seleccionada
+  const seasonalHours = hours.filter((hour) =>
+    isDateInRange(
+      dateToUse,
+      hour.valid_from,
+      hour.valid_to
+    )
   );
 
-  // no hay horarios para hoy
-  if (todayHours.length === 0) {
+  if (seasonalHours.length === 0) {
     return "<div>Sin horarios disponibles</div>";
   }
 
-  // marcados como cerrado
-  if (todayHours.every((h) => h.closed)) {
-    return `<div>${selectedDate ? "Ese día" : "Hoy"}: Cerrado</div>`;
+  // Comprueba cierres extraordinarios
+  const isClosedDate = seasonalHours.some((hour) => {
+    const closedDates = Array.isArray(hour.closed_dates)
+      ? hour.closed_dates
+      : [];
+
+    return closedDates.includes(currentMonthDay);
+  });
+
+  if (isClosedDate) {
+    return `<div>${dateLabel}: Cerrado</div>`;
   }
 
-  // Filtra solo los tramos abiertos válidos
+  // Filtra por el día de la semana
+  const todayHours = seasonalHours.filter((hour) =>
+    isDowValid(hour.dow, currentDow)
+  );
+
+  // Existen horarios, pero no abre ese día
+  if (todayHours.length === 0) {
+    return `<div>${dateLabel}: Cerrado</div>`;
+  }
+
+  // Lugar público sin horario de apertura o cierre
+  const hasFreeAccess = todayHours.some(
+    (hour) =>
+      !hour.open_time &&
+      !hour.close_time &&
+      !hour.last_entry_time
+  );
+
+  if (hasFreeAccess) {
+    const duration = todayHours.find(
+      (hour) => hour.visit_duration
+    )?.visit_duration;
+
+    return `
+      <div>Acceso libre / sin horario</div>
+      ${
+        duration
+          ? `<div style="color:#666;">Duración estimada: ${duration} min</div>`
+          : ""
+      }
+    `;
+  }
+
   const ranges = todayHours
-    .filter((h) => !h.closed && h.open_time && h.close_time)
-    .map((h) => ({
-      open_time: h.open_time,
-      close_time: h.close_time,
+    .filter((hour) => hour.open_time && hour.close_time)
+    .map((hour) => ({
+      open_time: hour.open_time,
+      close_time: hour.close_time,
     }));
 
   if (ranges.length === 0) {
     return "<div>Sin horarios disponibles</div>";
   }
 
-  // Une tramos (mañana + tarde, etc.)
   const mergedRanges = mergeRanges(ranges);
 
-  const text = mergedRanges
-    .map((r) => `${formatHour(r.start)} - ${formatHour(r.end)}`)
+  const hoursText = mergedRanges
+    .map(
+      (range) =>
+        `${formatHour(range.start)} - ${formatHour(range.end)}`
+    )
     .join(", ");
 
-  return `<div>${selectedDate ? "Ese día" : "Hoy"}: ${text}</div>`;
+  const lastEntry = todayHours
+    .map((hour) => hour.last_entry_time)
+    .filter(Boolean)
+    .sort(
+      (a, b) => timeToMinutes(b) - timeToMinutes(a)
+    )[0];
+
+  const duration = todayHours.find(
+    (hour) => hour.visit_duration
+  )?.visit_duration;
+
+  return `
+    <div>${dateLabel}: ${hoursText}</div>
+    ${
+      lastEntry
+        ? `<div style="color:#666;">Último acceso: ${formatHour(lastEntry)}</div>`
+        : ""
+    }
+    ${
+      duration
+        ? `<div style="color:#666;">Duración estimada: ${duration} min</div>`
+        : ""
+    }
+  `;
 }
+
 
 // Componente principal del mapa
 const MapView = ({
@@ -402,7 +525,7 @@ useEffect(() => {
       }
     ).addTo(group);
   }
-}, [places, routeResult, routeMode, zones, tempZone, isDrawingZone, onLoadPlaceHours, itineraryStops]);
+}, [places, routeResult, routeMode, zones, tempZone, isDrawingZone, onLoadPlaceHours, itineraryStops, selectedDate]);
   return <div ref={containerRef} className="w-full h-full min-h-[400px] rounded-lg" />;
 };
 
