@@ -3,8 +3,12 @@ import { useCallback } from "react";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const useApi = () => {
-  const fetchApi = useCallback(async (endpoint, options = {}, authRequired = false) => {
+  const fetchApi = useCallback(async (endpoint, options = {}, authRequired = true) => {
     const token = localStorage.getItem("firebaseToken");
+    
+    if (authRequired && !token) {
+      throw new Error("No hay token de autenticación");
+    }
     
     const headers = {
       "Content-Type": "application/json",
