@@ -61,21 +61,18 @@ function getRouteMarkerIcon(letter, backgroundColor) {
     popupAnchor: [0, -16],
   });
 }
-
-
-// Marcador azul para la ubicación actual del usuario.
-const originIcon = getRouteMarkerIcon(
-  "A",
-  "#2563EB"
-);
-
-
-// Marcador rojo para el lugar de destino.
-const destinationIcon = getRouteMarkerIcon(
-  "B",
-  "#DC2626"
-);
-
+/**
+ * Devuelve la letra correspondiente a cada punto:
+ *
+ * 0 → A
+ * 1 → B
+ * 2 → C
+ */
+function getRouteLetter(index) {
+  return String.fromCharCode(
+    65 + index
+  );
+}
 
 // =========================================================
 // FUNCIONES AUXILIARES
@@ -911,73 +908,98 @@ const MapView = ({
         }
       );
 
+      // =======================================================
+      // MARCADORES A, B, C...
+      // =======================================================
 
-      // Marcador del origen.
-      const originLat =
-        Number(
-          routeResult.originCoord?.lat
-        );
+      // Recupera todos los destinos de la ruta.
+      //
+      // Se mantiene la compatibilidad con rutas antiguas
+      // que solo tengan destCoord.
+      const destinationCoords =
+        Array.isArray(routeResult.destinationCoords) &&
+        routeResult.destinationCoords.length > 0
+          ? routeResult.destinationCoords
+          : routeResult.destCoord
+            ? [routeResult.destCoord]
+            : [];
 
-      const originLng =
-        Number(
-          routeResult.originCoord?.lng
-        );
+      const destinationLabels =
+        Array.isArray(routeResult.destinationLabels)
+          ? routeResult.destinationLabels
+          : [];
 
-      if (
-        Number.isFinite(originLat) &&
-        Number.isFinite(originLng)
-      ) {
-        L.marker(
-          [originLat, originLng],
-          {
-            icon: originIcon,
-            zIndexOffset: 1000,
+
+      // El primer punto será el origen.
+      // Los siguientes serán los destinos.
+      const routePoints = [
+        {
+          coord: routeResult.originCoord,
+          label:
+            routeResult.originLabel ||
+            "Origen",
+        },
+
+        ...destinationCoords.map(
+          (coord, index) => ({
+            coord,
+
+            label:
+              destinationLabels[index] ||
+              `Destino ${index + 1}`,
+          })
+        ),
+      ];
+
+
+      // Crea un marcador para cada punto:
+      // A, B, C, D...
+      routePoints.forEach(
+        (routePoint, index) => {
+          const latitude =
+            Number(routePoint.coord?.lat);
+
+          const longitude =
+            Number(routePoint.coord?.lng);
+
+          if (
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude)
+          ) {
+            return;
           }
-        )
-          .bindPopup(
-            escapeHtml(
-              routeResult.originLabel ||
-                "Mi ubicación actual"
-            )
+
+          const letter =
+            getRouteLetter(index);
+
+          // El origen será azul.
+          // Los destinos serán rojos.
+          const backgroundColor =
+            index === 0
+              ? "#2563EB"
+              : "#DC2626";
+
+          const markerIcon =
+            getRouteMarkerIcon(
+              letter,
+              backgroundColor
+            );
+
+          L.marker(
+            [latitude, longitude],
+            {
+              icon: markerIcon,
+              zIndexOffset: 1000 + index,
+            }
           )
-          .addTo(group);
-      }
-
-
-      // Marcador del destino.
-      const destinationLat =
-        Number(
-          routeResult.destCoord?.lat
-        );
-
-      const destinationLng =
-        Number(
-          routeResult.destCoord?.lng
-        );
-
-      if (
-        Number.isFinite(destinationLat) &&
-        Number.isFinite(destinationLng)
-      ) {
-        L.marker(
-          [
-            destinationLat,
-            destinationLng,
-          ],
-          {
-            icon: destinationIcon,
-            zIndexOffset: 1000,
-          }
-        )
-          .bindPopup(
-            escapeHtml(
-              routeResult.destinationLabel ||
-                "Destino"
+            .bindPopup(
+              escapeHtml(
+                routePoint.label
+              )
             )
-          )
-          .addTo(group);
-      }
-
+            .addTo(group);
+        }
+      );
 
       // Ajusta el mapa para mostrar
       // la ruta completa.

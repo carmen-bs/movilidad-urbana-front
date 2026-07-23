@@ -47,11 +47,8 @@ const HomePage = () => {
   // Ciudad seleccionada en RoutesPanel.
   const [selectedCity, setSelectedCity] = useState("");
 
-  // Lugar de destino seleccionado.
-  const [selectedPlaceId, setSelectedPlaceId] = useState("");
-
-  // Lugares que el usuario quiere mostrar en el mapa.
-  const [visiblePlaceIds, setVisiblePlaceIds] = useState([]);
+  // Lugares de destino seleccionados y visibles en el mapa.
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState([]);
 
   // Fecha elegida para consultar los horarios del lugar.
   const [selectedRouteDate, setSelectedRouteDate] = useState("");
@@ -308,16 +305,19 @@ const HomePage = () => {
   // - elimina la ruta anterior.
   const handleChangeCity = (city) => {
     setSelectedCity(city);
-    setSelectedPlaceId("");
-    setVisiblePlaceIds([]);
+
+    // Al cambiar de ciudad se eliminan todos
+    // los destinos seleccionados anteriormente.
+    setSelectedPlaceIds([]);
+
     setRouteResult(null);
     setSelectedPoint(null);
   };
 
-  // Al cambiar el lugar de destino,
+  // Al cambiar los lugares de destino,
   // elimina la ruta anterior para poder recalcularla.
-  const handleChangeSelectedPlace = (placeId) => {
-    setSelectedPlaceId(placeId);
+  const handleChangeSelectedPlaces = (placeIds) => {
+    setSelectedPlaceIds(placeIds);
     setRouteResult(null);
     setSelectedPoint(null);
   };
@@ -327,10 +327,10 @@ const HomePage = () => {
   // LUGARES VISIBLES EN EL MAPA
   // =========================================================
 
-  // Solo se muestran en el mapa los lugares
-  // que el usuario haya marcado.
-  const visiblePlaces = places.filter((place) =>
-    visiblePlaceIds.includes(place.place_id)
+  // Los lugares seleccionados como destino
+  // son también los que aparecen en el mapa.
+  const selectedPlaces = places.filter((place) =>
+    selectedPlaceIds.includes(place.place_id)
   );
 
 
@@ -357,7 +357,7 @@ const HomePage = () => {
 
         <p className="text-sm text-muted-foreground mt-1">
           Utiliza tu ubicación actual y calcula una ruta
-          hasta uno de los lugares disponibles.
+          hasta uno o varios lugares disponibles.
         </p>
       </div>
 
@@ -380,10 +380,8 @@ const HomePage = () => {
             selectedCity={selectedCity}
             onChangeCity={handleChangeCity}
             places={places}
-            selectedPlaceId={selectedPlaceId}
-            onChangeSelectedPlaceId={handleChangeSelectedPlace}
-            visiblePlaceIds={visiblePlaceIds}
-            onChangeVisiblePlaceIds={setVisiblePlaceIds}
+            selectedPlaceIds={selectedPlaceIds}
+            onChangeSelectedPlaceIds={handleChangeSelectedPlaces}
             routeResult={routeResult}
             onRouteCalculated={handleRouteCalculated}
             onChangeRouteDate={setSelectedRouteDate}
@@ -394,7 +392,7 @@ const HomePage = () => {
         {/* MAPA */}
         <div className="flex-1 bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden relative">
           <MapView
-            places={visiblePlaces}
+            places={selectedPlaces}
             routeResult={routeResult}
             routeMode={routeMode}
             zones={zones}

@@ -1,16 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Route as RouteIcon,
-  Car,
-  Footprints,
-  Bike,
-  BusFront,
-  Sparkles,
-  MapPin,
-  Navigation,
-  LocateFixed,
-  Clock,
-} from "lucide-react";
+import { Route as RouteIcon, Car, Footprints, Bike,BusFront, Sparkles, Navigation, Clock, } from "lucide-react";
 
 
 // =========================================================
@@ -120,26 +109,21 @@ const RoutesPanel = ({
   selectedCity,
   onChangeCity,
   places = [],
-  selectedPlaceId,
-  onChangeSelectedPlaceId,
-  visiblePlaceIds = [],
-  onChangeVisiblePlaceIds,
+  selectedPlaceIds = [],
+  onChangeSelectedPlaceIds,
   routeResult,
   onRouteCalculated,
   onChangeRouteDate,
 }) => {
 
-  // Coordenadas reales del usuario.
-  const [originCoord, setOriginCoord] = useState(null);
-
+  
   // Modo de transporte seleccionado.
   const [mode, setMode] = useState("good");
 
   // Fecha seleccionada para consultar los horarios del destino.
   const [date, setDate] = useState("");
 
-  // Estados de carga.
-  const [locating, setLocating] = useState(false);
+  // Estados de carga de la ruta
   const [calculating, setCalculating] = useState(false);
 
   // Mensaje de validación o error.
@@ -163,14 +147,19 @@ const RoutesPanel = ({
   }, [places, selectedCity]);
 
 
-  // Obtiene el objeto completo del lugar seleccionado.
-  const selectedPlace = useMemo(() => {
-    return (
-      cityPlaces.find(
-        (place) => place.place_id === selectedPlaceId
-      ) || null
-    );
-  }, [cityPlaces, selectedPlaceId]);
+  // Obtiene los objetos completos de los lugares seleccionados.
+  //
+  // Se mantiene el orden en el que el usuario ha marcado
+  // los destinos.
+  const selectedPlaces = useMemo(() => {
+    return selectedPlaceIds
+      .map((placeId) =>
+        cityPlaces.find(
+          (place) => place.place_id === placeId
+        )
+      )
+      .filter(Boolean);
+  }, [cityPlaces, selectedPlaceIds]);
 
 
   // =========================================================
@@ -181,81 +170,32 @@ const RoutesPanel = ({
     // Informa a HomePage de la nueva ciudad.
     onChangeCity?.(city);
 
-    // Limpia el destino anterior.
-    onChangeSelectedPlaceId?.("");
-
-    // Oculta los lugares de la ciudad anterior.
-    onChangeVisiblePlaceIds?.([]);
+    // Limpia los destinos de la ciudad anterior.
+    onChangeSelectedPlaceIds?.([]);
 
     setError("");
   };
 
-  // Muestra u oculta un lugar en el mapa.
-  const togglePlaceVisibility = (placeId) => {
-    if (visiblePlaceIds.includes(placeId)) {
-      onChangeVisiblePlaceIds?.(
-        visiblePlaceIds.filter(
+
+  // Añade o elimina un lugar de la lista de destinos.
+  //
+  // El mismo listado controla también los marcadores
+  // que aparecen en el mapa.
+  const toggleDestination = (placeId) => {
+    if (selectedPlaceIds.includes(placeId)) {
+      onChangeSelectedPlaceIds?.(
+        selectedPlaceIds.filter(
           (currentId) => currentId !== placeId
         )
       );
     } else {
-      onChangeVisiblePlaceIds?.([
-        ...visiblePlaceIds,
+      onChangeSelectedPlaceIds?.([
+        ...selectedPlaceIds,
         placeId,
       ]);
     }
-  };
 
-  // =========================================================
-  // GEOLOCALIZACIÓN
-  // =========================================================
-
-  // Obtiene la ubicación real del usuario mediante el navegador.
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError(
-        "La geolocalización no está disponible en este navegador."
-      );
-      return;
-    }
-
-    setLocating(true);
     setError("");
-
-    navigator.geolocation.getCurrentPosition(
-      // La ubicación se ha obtenido correctamente.
-      (position) => {
-        const { latitude, longitude } = position.coords;
-
-        setOriginCoord({
-          lat: latitude,
-          lng: longitude,
-        });
-
-        setLocating(false);
-      },
-
-      // No se ha podido obtener la ubicación.
-      (geolocationError) => {
-        console.error(
-          "Error obteniendo la ubicación:",
-          geolocationError
-        );
-
-        setError(
-          "No se pudo obtener tu ubicación. Comprueba los permisos del navegador."
-        );
-
-        setLocating(false);
-      },
-
-      // Opciones de geolocalización.
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      }
-    );
   };
 
 
@@ -278,7 +218,7 @@ const RoutesPanel = ({
   const requestOsrmRoute = async (
     routeMode,
     origin,
-    destination
+    destinations
   ) => {
     // Busca la configuración correspondiente al modo.
     const modeConfig = TRANSPORT_MODES.find(
@@ -291,11 +231,19 @@ const RoutesPanel = ({
       );
     }
 
-    // OSRM espera las coordenadas en formato:
-    // longitud,latitud;longitud,latitud
-    const coordinates =
-      `${origin.lng},${origin.lat};` +
-      `${destination.lng},${destination.lat}`;
+    // OSRM admite varias coordenadas separadas por punto y coma.
+    //
+    // La primera coordenada es el origen y las siguientes
+    // son los destinos, siguiendo el orden de selección.
+    const coordinates = [
+      origin,
+      ...destinations,
+    ]
+      .map(
+        (coordinate) =>
+          `${coordinate.lng},${coordinate.lat}`
+      )
+      .join(";");
 
     // Construye la URL de la petición.
     const url =
@@ -339,18 +287,11 @@ const RoutesPanel = ({
   const handleCalculateRoute = async () => {
     setError("");
 
-    // Comprueba que el usuario haya compartido su ubicación.
-    if (!originCoord) {
+    // Para calcular una ruta entre lugares,
+    // es necesario seleccionar al menos dos.
+    if (selectedPlaces.length < 2) {
       setError(
-        "Primero debes obtener tu ubicación actual."
-      );
-      return;
-    }
-
-    // Comprueba que haya seleccionado un destino.
-    if (!selectedPlace) {
-      setError(
-        "Selecciona un lugar de destino."
+        "Selecciona al menos dos lugares para calcular la ruta."
       );
       return;
     }
@@ -363,22 +304,35 @@ const RoutesPanel = ({
       return;
     }
 
-    // Convierte las coordenadas de Supabase a números.
-    const destination = {
-      lat: Number(selectedPlace.lat),
-      lng: Number(selectedPlace.lon),
-    };
+    // Convierte las coordenadas de todos los lugares
+    // seleccionados a números.
+    const routePoints = selectedPlaces.map(
+      (place) => ({
+        lat: Number(place.lat),
+        lng: Number(place.lon),
+      })
+    );
 
-    // Comprueba que el destino tenga coordenadas válidas.
-    if (
-      !Number.isFinite(destination.lat) ||
-      !Number.isFinite(destination.lng)
-    ) {
+    // Comprueba que todos los lugares tengan
+    // coordenadas válidas.
+    const hasInvalidPoint = routePoints.some(
+      (point) =>
+        !Number.isFinite(point.lat) ||
+        !Number.isFinite(point.lng)
+    );
+
+    if (hasInvalidPoint) {
       setError(
-        "El lugar seleccionado no tiene coordenadas válidas."
+        "Uno de los lugares seleccionados no tiene coordenadas válidas."
       );
       return;
     }
+
+    // El primer lugar marcado será el origen.
+    const origin = routePoints[0];
+
+    // Los demás lugares serán los destinos.
+    const destinations = routePoints.slice(1);
 
     setCalculating(true);
 
@@ -392,8 +346,8 @@ const RoutesPanel = ({
           ROUTABLE_MODES.map((routeMode) =>
             requestOsrmRoute(
               routeMode,
-              originCoord,
-              destination
+              origin,
+              destinations
             )
           )
         );
@@ -422,8 +376,8 @@ const RoutesPanel = ({
         // Calcula solamente el modo seleccionado.
         selectedResult = await requestOsrmRoute(
           mode,
-          originCoord,
-          destination
+          origin,
+          destinations
         );
       }
 
@@ -432,7 +386,12 @@ const RoutesPanel = ({
         mode: calculatedMode,
       } = selectedResult;
 
-      // Estructura que utilizará HomePage y MapView.
+      // Último punto de la ruta.
+      // Se mantiene destCoord para que MapView siga siendo compatible.
+      const finalDestination =
+        destinations[destinations.length - 1];
+
+      // Estructura que utilizarán HomePage y MapView.
       const result = {
         segments: [
           {
@@ -441,13 +400,24 @@ const RoutesPanel = ({
           },
         ],
 
-        originCoord,
+        originCoord: origin,
 
-        destCoord: destination,
+        // Último destino de la ruta.
+        destCoord: finalDestination,
 
-        originLabel: "Mi ubicación actual",
+        // Todos los destinos, en orden.
+        destinationCoords: destinations,
 
-        destinationLabel: selectedPlace.name,
+        originLabel: selectedPlaces[0].name,
+
+        destinationLabel: selectedPlaces
+          .slice(1)
+          .map((place) => place.name)
+          .join(" → "),
+
+        destinationLabels: selectedPlaces
+          .slice(1)
+          .map((place) => place.name),
 
         // OSRM devuelve la distancia en metros.
         distance:
@@ -537,42 +507,6 @@ const RoutesPanel = ({
       </div>
 
 
-      {/* ORIGEN */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5 text-azul" />
-          Origen
-        </label>
-
-        <button
-          type="button"
-          onClick={handleUseCurrentLocation}
-          disabled={locating}
-          className={`h-[46px] rounded-xl border px-4 text-sm font-medium transition flex items-center justify-center gap-2 ${
-            originCoord
-              ? "border-verde-oscuro bg-verde-claro/20 text-verde-oscuro"
-              : "border-border bg-card text-foreground hover:border-azul/50"
-          } disabled:opacity-60`}
-        >
-          <LocateFixed className="w-4 h-4" />
-
-          {locating
-            ? "Obteniendo ubicación..."
-            : originCoord
-              ? "Ubicación obtenida"
-              : "Usar mi ubicación actual"}
-        </button>
-
-        {/* Coordenadas obtenidas */}
-        {originCoord && (
-          <p className="text-xs text-muted-foreground">
-            {originCoord.lat.toFixed(6)},{" "}
-            {originCoord.lng.toFixed(6)}
-          </p>
-        )}
-      </div>
-
-
       {/* CIUDAD DE DESTINO */}
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
@@ -601,86 +535,57 @@ const RoutesPanel = ({
         </select>
       </div>
 
-          {/* LUGARES VISIBLES EN EL MAPA */}
-{selectedCity && cityPlaces.length > 0 && (
-  <div className="flex flex-col gap-2">
-    <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
-      Lugares visibles en el mapa
-    </label>
-
-    <div className="rounded-xl border border-border bg-card p-3 max-h-[180px] overflow-y-auto flex flex-col gap-2">
-      {cityPlaces.map((place) => (
-        <label
-          key={place.place_id}
-          className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-        >
-          <input
-            type="checkbox"
-            checked={visiblePlaceIds.includes(
-              place.place_id
-            )}
-            onChange={() =>
-              togglePlaceVisibility(
-                place.place_id
-              )
-            }
-            className="w-4 h-4 accent-verde-oscuro"
-          />
-
-          <span>{place.name}</span>
-        </label>
-      ))}
-    </div>
-  </div>
-)}
-
-      {/* LUGAR DE DESTINO */}
-      <div className="flex flex-col gap-1">
+         {/* LUGARES DE DESTINO */}
+      <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-1.5">
           <Navigation className="w-3.5 h-3.5 text-azul" />
-          Lugar de destino
+          Lugares de destino
         </label>
 
-        <select
-          value={selectedPlaceId || ""}
-          disabled={!selectedCity}
-          onChange={(event) => {
-          const placeId = event.target.value;
+        {!selectedCity && (
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-sm text-muted-foreground">
+              Selecciona primero una ciudad.
+            </p>
+          </div>
+        )}
 
-            // Guarda el destino seleccionado.
-            onChangeSelectedPlaceId?.(placeId);
+        {selectedCity && cityPlaces.length === 0 && (
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-sm text-muted-foreground">
+              No hay lugares disponibles en esta ciudad.
+            </p>
+          </div>
+        )}
 
-            // Al seleccionar un destino, muestra automáticamente
-            // ese lugar en el mapa y marca su checkbox.
-            if (
-              placeId &&
-              !visiblePlaceIds.includes(placeId)
-            ) {
-              onChangeVisiblePlaceIds?.([
-                ...visiblePlaceIds,
-                placeId,
-              ]);
-            }
+        {selectedCity && cityPlaces.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-3 max-h-[180px] overflow-y-auto flex flex-col gap-2">
+            {cityPlaces.map((place) => {
+              const isSelected =
+                selectedPlaceIds.includes(place.place_id);
 
-            setError("");
-          }}
-          className="h-[48px] rounded-2xl border border-border bg-white px-4 pr-10 text-sm text-foreground shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-azul/30 hover:border-azul/40 disabled:opacity-50"
-        >
-          <option value="">
-            {selectedCity
-              ? "Selecciona un lugar"
-              : "Selecciona primero una ciudad"}
-          </option>
+              return (
+                <label
+                  key={place.place_id}
+                  className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() =>
+                      toggleDestination(place.place_id)
+                    }
+                    className="w-4 h-4 accent-verde-oscuro"
+                  />
 
-          {cityPlaces.map((place) => (
-            <option
-              key={place.place_id}
-              value={place.place_id}
-            >
-              {place.name}
-            </option>
-          ))}
-        </select>
+                  <span className="flex-1">
+                    {place.name}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        )}
       </div>
 
 
@@ -724,9 +629,7 @@ const RoutesPanel = ({
         onClick={handleCalculateRoute}
         disabled={
           calculating ||
-          locating ||
-          !originCoord ||
-          !selectedPlaceId
+          selectedPlaceIds.length < 2
         }
         className="h-[44px] rounded-md bg-verde text-white text-sm font-medium hover:bg-verde-oscuro transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
@@ -746,7 +649,13 @@ const RoutesPanel = ({
           </h4>
 
           <p className="text-sm text-foreground">
-            <strong>Destino:</strong>{" "}
+            <strong>Origen:</strong>{" "}
+            {routeResult.originLabel ||
+              "Primer lugar seleccionado"}
+          </p>
+
+          <p className="text-sm text-foreground">
+            <strong>Destinos:</strong>{" "}
             {routeResult.destinationLabel ||
               "Lugar seleccionado"}
           </p>
