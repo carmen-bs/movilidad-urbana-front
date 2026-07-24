@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Route as RouteIcon, Car, Footprints, Bike,BusFront, Sparkles, Navigation, Clock, } from "lucide-react";
-
+import { useApi } from "@/hooks/useApi";
 
 // =========================================================
 // MODOS DE TRANSPORTE
@@ -50,6 +50,7 @@ const MODE_LABELS = {
   walk: "A pie",
   bike: "Bicicleta",
   drive_service: "Bus",
+  mixed: "Mixto",
 };
 
 
@@ -100,7 +101,6 @@ const formatDuration = (minutes = 0) => {
   return `${hours} h ${remainingMinutes} min`;
 };
 
-
 // =========================================================
 // COMPONENTE PRINCIPAL
 // =========================================================
@@ -116,15 +116,24 @@ const RoutesPanel = ({
   onChangeRouteDate,
 }) => {
 
-  
+  const { fetchApi } = useApi();
+
   // Modo de transporte seleccionado.
   const [mode, setMode] = useState("good");
 
-  // Fecha seleccionada para consultar los horarios del destino.
+  // Fecha y hora de inicio del itinerario.
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("10:00");
 
-  // Estados de carga de la ruta
-  const [calculating, setCalculating] = useState(false);
+  // Opciones devueltas por la API.
+  const [itineraries, setItineraries] = useState([]);
+
+  // Itinerario seleccionado en el ranking.
+  const [selectedItineraryId, setSelectedItineraryId] =
+    useState("");
+
+  // Estado de búsqueda.
+  const [searching, setSearching] = useState(false);
 
   // Mensaje de validación o error.
   const [error, setError] = useState("");
@@ -198,105 +207,32 @@ const RoutesPanel = ({
     setError("");
   };
 
-
   // =========================================================
-  // PETICIÓN DE RUTA A OSRM
-  // =========================================================
-
-  /**
-   * Solicita a OSRM una ruta entre dos coordenadas.
-   *
-   * routeMode:
-   * - drive
-   * - walk
-   * - bike
-   *
-   * Devuelve:
-   * - modo utilizado
-   * - ruta devuelta por OSRM
-   */
-  const requestOsrmRoute = async (
-    routeMode,
-    origin,
-    destinations
-  ) => {
-    // Busca la configuración correspondiente al modo.
-    const modeConfig = TRANSPORT_MODES.find(
-      (transportMode) => transportMode.id === routeMode
-    );
-
-    if (!modeConfig?.osrmProfile) {
-      throw new Error(
-        `El modo ${routeMode} no tiene un perfil OSRM configurado.`
-      );
-    }
-
-    // OSRM admite varias coordenadas separadas por punto y coma.
-    //
-    // La primera coordenada es el origen y las siguientes
-    // son los destinos, siguiendo el orden de selección.
-    const coordinates = [
-      origin,
-      ...destinations,
-    ]
-      .map(
-        (coordinate) =>
-          `${coordinate.lng},${coordinate.lat}`
-      )
-      .join(";");
-
-    // Construye la URL de la petición.
-    const url =
-      `https://router.project-osrm.org/route/v1/` +
-      `${modeConfig.osrmProfile}/${coordinates}` +
-      "?overview=full&geometries=geojson&steps=false";
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `OSRM respondió con estado ${response.status}.`
-      );
-    }
-
-    const data = await response.json();
-
-    // Comprueba que OSRM haya encontrado al menos una ruta.
-    if (
-      data.code !== "Ok" ||
-      !Array.isArray(data.routes) ||
-      data.routes.length === 0
-    ) {
-      throw new Error(
-        data.message ||
-          `No se encontró una ruta para el modo ${routeMode}.`
-      );
-    }
-
-    return {
-      mode: routeMode,
-      route: data.routes[0],
-    };
-  };
-
-
-  // =========================================================
-  // CALCULAR RUTA
+  // BUSCAR ITINERARIOS EN LA API
   // =========================================================
 
-  const handleCalculateRoute = async () => {
+  const handleSearchItineraries = async () => {
     setError("");
 
-    // Para calcular una ruta entre lugares,
-    // es necesario seleccionar al menos dos.
-    if (selectedPlaces.length < 2) {
+    if (!selectedCity) {
+      setError("Selecciona una ciudad.");
+      return;
+    }
+
+    if (selectedPlaceIds.length < 2) {
       setError(
-        "Selecciona al menos dos lugares para calcular la ruta."
+        "Selecciona al menos dos lugares."
       );
       return;
     }
 
-    // El autobús queda desactivado en esta primera versión.
+    if (!date || !time) {
+      setError(
+        "Selecciona una fecha y una hora."
+      );
+      return;
+    }
+
     if (mode === "drive_service") {
       setError(
         "Las rutas de autobús todavía no están disponibles."
@@ -304,153 +240,217 @@ const RoutesPanel = ({
       return;
     }
 
-    // Convierte las coordenadas de todos los lugares
-    // seleccionados a números.
-    const routePoints = selectedPlaces.map(
-      (place) => ({
-        lat: Number(place.lat),
-        lng: Number(place.lon),
-      })
-    );
+    const allowedModes =
+      mode === "good"
+        ? ["drive", "walk", "bike"]
+        : [mode];
 
-    // Comprueba que todos los lugares tengan
-    // coordenadas válidas.
-    const hasInvalidPoint = routePoints.some(
-      (point) =>
-        !Number.isFinite(point.lat) ||
-        !Number.isFinite(point.lng)
-    );
+    setSearching(true);
+    setItineraries([]);
+    setSelectedItineraryId("");
 
-    if (hasInvalidPoint) {
+    try {
+      const data = await fetchApi(
+        "/itineraries/generate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            city: selectedCity,
+
+            // La API espera YYYYMMDD.
+            fecha_inicio: date.replaceAll("-", ""),
+
+            hora_inicio: time,
+
+            selected_place_ids:
+              selectedPlaceIds,
+
+            allowed_modes: allowedModes,
+
+            max_itineraries: 5,
+          }),
+        },
+        true
+      );
+
+      const generatedItineraries =
+        Array.isArray(data?.itineraries)
+          ? data.itineraries
+          : [];
+
+      setItineraries(
+        generatedItineraries.sort(
+          (first, second) =>
+            first.ranking_position -
+            second.ranking_position
+        )
+      );
+
+      if (generatedItineraries.length === 0) {
+        setError(
+          "No se encontraron itinerarios viables."
+        );
+      }
+    } catch (searchError) {
+      console.error(
+        "Error buscando itinerarios:",
+        searchError
+      );
+
       setError(
-        "Uno de los lugares seleccionados no tiene coordenadas válidas."
+        searchError.message ||
+          "No se pudieron generar los itinerarios."
+      );
+    } finally {
+      setSearching(false);
+    }
+  };
+
+
+  // =========================================================
+  // SELECCIONAR UN ITINERARIO
+  // =========================================================
+
+  const handleSelectItinerary = (itinerary) => {
+    const itineraryRoutes = [
+      ...(itinerary.routes || []),
+    ].sort(
+      (first, second) =>
+        first.route_order -
+        second.route_order
+    );
+
+    // Recupera los lugares completos para obtener
+    // sus coordenadas.
+    const orderedPlaces = (
+      itinerary.place_ids || []
+    )
+      .map((placeId) =>
+        places.find(
+          (place) =>
+            place.place_id === placeId
+        )
+      )
+      .filter(Boolean);
+
+    if (orderedPlaces.length < 2) {
+      setError(
+        "No se encontraron las coordenadas del itinerario."
       );
       return;
     }
 
-    // El primer lugar marcado será el origen.
-    const origin = routePoints[0];
+    const coordinates = orderedPlaces.map(
+      (place) => ({
+        lat: Number(place.lat),
+        lng: Number(
+          place.lon ?? place.lng
+        ),
+      })
+    );
 
-    // Los demás lugares serán los destinos.
-    const destinations = routePoints.slice(1);
+    const hasInvalidCoordinate =
+      coordinates.some(
+        (coordinate) =>
+          !Number.isFinite(coordinate.lat) ||
+          !Number.isFinite(coordinate.lng)
+      );
 
-    setCalculating(true);
+    if (hasInvalidCoordinate) {
+      setError(
+        "Uno de los lugares no tiene coordenadas válidas."
+      );
+      return;
+    }
 
-    try {
-      let selectedResult;
+    const originCoord = coordinates[0];
+    const destinationCoords =
+      coordinates.slice(1);
 
-      // Si el usuario selecciona "Mejor", intenta calcular
-      // coche, paseo y bicicleta.
-      if (mode === "good") {
-        const results = await Promise.allSettled(
-          ROUTABLE_MODES.map((routeMode) =>
-            requestOsrmRoute(
-              routeMode,
-              origin,
-              destinations
-            )
-          )
-        );
+    const modesUsed =
+      itinerary.modes_used || [];
 
-        // Conserva únicamente las peticiones que hayan funcionado.
-        const validResults = results
-          .filter(
-            (result) => result.status === "fulfilled"
-          )
-          .map((result) => result.value)
-          .sort(
-            (firstResult, secondResult) =>
-              firstResult.route.duration -
-              secondResult.route.duration
-          );
+    const calculatedMode =
+      modesUsed.length === 1
+        ? modesUsed[0]
+        : "mixed";
 
-        if (validResults.length === 0) {
-          throw new Error(
-            "No se encontró ninguna ruta disponible."
-          );
-        }
+    const result = {
+      // Cada trayecto guardado incluye su geometría.
+      segments: itineraryRoutes
+        .filter(
+          (route) =>
+            route.route_geometry
+        )
+        .map((route) => ({
+          geometry:
+            route.route_geometry,
 
-        // Selecciona la ruta con menor duración.
-        selectedResult = validResults[0];
-      } else {
-        // Calcula solamente el modo seleccionado.
-        selectedResult = await requestOsrmRoute(
-          mode,
-          origin,
-          destinations
-        );
-      }
+          mode:
+            route.transport_mode ||
+            "drive",
+        })),
 
-      const {
-        route,
-        mode: calculatedMode,
-      } = selectedResult;
+      originCoord,
 
-      // Último punto de la ruta.
-      // Se mantiene destCoord para que MapView siga siendo compatible.
-      const finalDestination =
-        destinations[destinations.length - 1];
-
-      // Estructura que utilizarán HomePage y MapView.
-      const result = {
-        segments: [
-          {
-            geometry: route.geometry,
-            mode: calculatedMode,
-          },
+      destCoord:
+        destinationCoords[
+          destinationCoords.length - 1
         ],
 
-        originCoord: origin,
+      destinationCoords,
 
-        // Último destino de la ruta.
-        destCoord: finalDestination,
+      originLabel:
+        orderedPlaces[0].name,
 
-        // Todos los destinos, en orden.
-        destinationCoords: destinations,
-
-        originLabel: selectedPlaces[0].name,
-
-        destinationLabel: selectedPlaces
+      destinationLabel:
+        orderedPlaces
           .slice(1)
           .map((place) => place.name)
           .join(" → "),
 
-        destinationLabels: selectedPlaces
+      destinationLabels:
+        orderedPlaces
           .slice(1)
           .map((place) => place.name),
 
-        // OSRM devuelve la distancia en metros.
-        distance:
-          Math.round(
-            (route.distance / 1000) * 10
-          ) / 10,
+      distance:
+        Math.round(
+          (
+            Number(
+              itinerary.total_distance_m ||
+                0
+            ) / 1000
+          ) * 10
+        ) / 10,
 
-        // OSRM devuelve la duración en segundos.
-        duration:
-          Math.round(route.duration / 60),
+      duration:
+        Number(
+          itinerary.total_time_min || 0
+        ),
 
-        calculatedMode,
-      };
+      calculatedMode,
 
-      // Envía la ruta calculada al componente HomePage.
-      onRouteCalculated?.(
-        result,
-        calculatedMode
-      );
-    } catch (routeError) {
-      console.error(
-        "Error calculando la ruta:",
-        routeError
-      );
+      itineraryId:
+        itinerary.itinerary_id,
 
-      setError(
-        "No se pudo calcular la ruta para el modo seleccionado."
-      );
-    } finally {
-      setCalculating(false);
-    }
+      itineraryRoutes,
+    };
+
+    setSelectedItineraryId(
+      itinerary.itinerary_id
+    );
+
+    setError("");
+
+    onRouteCalculated?.(
+      result,
+      modesUsed[0] || "drive"
+    );
   };
-
 
       // =========================================================
   // INTERFAZ
@@ -589,29 +589,54 @@ const RoutesPanel = ({
       </div>
 
 
-      {/* FECHA DE VISITA */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-azul" />
-          Fecha de visita
+      {/* FECHA Y HORA */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-azul" />
+            Fecha
+          </label>
 
-          <span className="font-normal normal-case text-muted-foreground">
-            (opcional)
-          </span>
-        </label>
+          <input
+            type="date"
+            value={date}
+            min={
+              new Date()
+                .toISOString()
+                .split("T")[0]
+            }
+            onChange={(event) => {
+              const selectedDate =
+                event.target.value;
 
-        <input
-          type="date"
-          value={date}
-          min={new Date().toISOString().split("T")[0]}
-          onChange={(event) => {
-            const selectedDate = event.target.value;
+              setDate(selectedDate);
+              setItineraries([]);
+              setSelectedItineraryId("");
 
-            setDate(selectedDate);
-            onChangeRouteDate?.(selectedDate);
-          }}
-          className="h-[44px] rounded-md border border-input bg-card px-3 text-sm text-foreground"
-        />
+              onChangeRouteDate?.(
+                selectedDate
+              );
+            }}
+            className="h-[44px] rounded-md border border-input bg-card px-3 text-sm text-foreground"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            Hora
+          </label>
+
+          <input
+            type="time"
+            value={time}
+            onChange={(event) => {
+              setTime(event.target.value);
+              setItineraries([]);
+              setSelectedItineraryId("");
+            }}
+            className="h-[44px] rounded-md border border-input bg-card px-3 text-sm text-foreground"
+          />
+        </div>
       </div>
 
 
@@ -623,61 +648,107 @@ const RoutesPanel = ({
       )}
 
 
-      {/* BOTÓN CALCULAR */}
+      {/* BOTÓN BUSCAR */}
       <button
         type="button"
-        onClick={handleCalculateRoute}
+        onClick={handleSearchItineraries}
         disabled={
-          calculating ||
-          selectedPlaceIds.length < 2
+          searching ||
+          selectedPlaceIds.length < 2 ||
+          !date ||
+          !time
         }
         className="h-[44px] rounded-md bg-verde text-white text-sm font-medium hover:bg-verde-oscuro transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <RouteIcon className="w-4 h-4" />
 
-        {calculating
-          ? "Calculando..."
-          : "Calcular ruta"}
+        {searching
+          ? "Buscando itinerarios..."
+          : "Buscar itinerarios"}
       </button>
 
 
-      {/* INFORMACIÓN DE LA RUTA */}
-      {routeResult && (
-        <div className="rounded-xl border border-verde-claro bg-verde-claro/10 p-4 flex flex-col gap-2">
+      {/* RANKING DE ITINERARIOS */}
+      {itineraries.length > 0 && (
+        <div className="flex flex-col gap-2">
           <h4 className="text-xs font-bold uppercase text-foreground">
-            Información de la ruta
+            Ranking de itinerarios
           </h4>
 
-          <p className="text-sm text-foreground">
-            <strong>Origen:</strong>{" "}
-            {routeResult.originLabel ||
-              "Primer lugar seleccionado"}
-          </p>
+          {itineraries.map((itinerary) => {
+            const isSelected =
+              selectedItineraryId ===
+              itinerary.itinerary_id;
 
-          <p className="text-sm text-foreground">
-            <strong>Destinos:</strong>{" "}
-            {routeResult.destinationLabel ||
-              "Lugar seleccionado"}
-          </p>
+            const distanceKm =
+              Number(
+                itinerary.total_distance_m ||
+                  0
+              ) / 1000;
 
-          <p className="text-sm text-foreground">
-            <strong>Modo:</strong>{" "}
-            {MODE_LABELS[
-              routeResult.calculatedMode
-            ] ||
-              routeResult.calculatedMode ||
-              "No disponible"}
-          </p>
+            return (
+              <button
+                key={itinerary.itinerary_id}
+                type="button"
+                onClick={() =>
+                  handleSelectItinerary(
+                    itinerary
+                  )
+                }
+                className={`rounded-xl border p-3 text-left transition ${
+                  isSelected
+                    ? "border-verde-oscuro bg-verde-claro/20"
+                    : "border-border bg-card hover:border-verde"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="w-7 h-7 shrink-0 rounded-full bg-verde-oscuro text-white text-sm font-bold flex items-center justify-center">
+                    {itinerary.ranking_position}
+                  </span>
 
-          <p className="text-sm text-foreground">
-            <strong>Distancia:</strong>{" "}
-            {routeResult.distance} km
-          </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Itinerario{" "}
+                      {itinerary.ranking_position}
+                    </p>
 
-          <p className="text-sm text-foreground">
-            <strong>Duración estimada:</strong>{" "}
-            {formatDuration(routeResult.duration)}
-          </p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      {(itinerary.place_names || [])
+                        .join(" → ")}
+                    </p>
+
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span>
+                        {formatDuration(
+                          itinerary.total_time_min
+                        )}
+                      </span>
+
+                      <span>
+                        {distanceKm.toFixed(1)} km
+                      </span>
+
+                      <span>
+                        {(itinerary.modes_used || [])
+                          .map(
+                            (currentMode) =>
+                              MODE_LABELS[
+                                currentMode
+                              ] ||
+                              currentMode
+                          )
+                          .join(", ")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-muted-foreground">
+                    ›
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
