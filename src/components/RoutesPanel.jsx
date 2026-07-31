@@ -71,8 +71,7 @@ const ALL_CITIES = [
 // FUNCIONES AUXILIARES
 // =========================================================
 
-// Normaliza textos para comparar ciudades ignorando
-// mayúsculas, minúsculas y acentos.
+// Normaliza textos para comparar ciudades ignorando mayúsculas, minúsculas y acentos.
 const normalizeText = (text = "") =>
   text
     .toLowerCase()
@@ -101,10 +100,10 @@ const formatDuration = (minutes = 0) => {
   return `${hours} h ${remainingMinutes} min`;
 };
 
+
 // =========================================================
 // COMPONENTE PRINCIPAL
 // =========================================================
-
 const RoutesPanel = ({
   selectedCity,
   onChangeCity,
@@ -158,9 +157,6 @@ const RoutesPanel = ({
 
 
   // Obtiene los objetos completos de los lugares seleccionados.
-  //
-  // Se mantiene el orden en el que el usuario ha marcado
-  // los destinos.
   const selectedPlaces = useMemo(() => {
     return selectedPlaceIds
       .map((placeId) =>
@@ -188,9 +184,6 @@ const RoutesPanel = ({
 
 
   // Añade o elimina un lugar de la lista de destinos.
-  //
-  // El mismo listado controla también los marcadores
-  // que aparecen en el mapa.
   const toggleDestination = (placeId) => {
     if (selectedPlaceIds.includes(placeId)) {
       onChangeSelectedPlaceIds?.(
@@ -211,7 +204,6 @@ const RoutesPanel = ({
   // =========================================================
   // BUSCAR ITINERARIOS EN LA API
   // =========================================================
-
   const handleSearchItineraries = async () => {
     setError("");
 
@@ -314,7 +306,6 @@ const RoutesPanel = ({
   // =========================================================
   // SELECCIONAR UN ITINERARIO
   // =========================================================
-
   const handleSelectItinerary = (itinerary) => {
     const itineraryRoutes = [
       ...(itinerary.routes || []),
@@ -324,8 +315,7 @@ const RoutesPanel = ({
         second.route_order
     );
 
-    // Recupera los lugares completos para obtener
-    // sus coordenadas.
+    // Recupera los lugares completos para obtener sus coordenadas.
     const orderedPlaces = (
       itinerary.place_ids || []
     )
@@ -455,7 +445,7 @@ const RoutesPanel = ({
     );
   };
 
-      // =========================================================
+  // =========================================================
   // INTERFAZ
   // =========================================================
 

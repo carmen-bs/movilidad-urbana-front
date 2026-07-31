@@ -11,8 +11,7 @@ import ItinerarySummaryPanel from "@/components/ItinerarySummaryPanel";
 // FUNCIONES AUXILIARES
 // =========================================================
 
-// Normaliza textos para comparar nombres de ciudades
-// ignorando mayúsculas, minúsculas y acentos.
+// Normaliza textos para comparar nombres de ciudades, ignorando mayúsculas, minúsculas y acentos.
 const normalizeText = (text = "") =>
   text
     .toLowerCase()
@@ -21,29 +20,15 @@ const normalizeText = (text = "") =>
     .trim();
 
 
-// =========================================================
-// COMPONENTE PRINCIPAL
-// =========================================================
-
 const HomePage = () => {
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
-
-
-  // =========================================================
-  // ESTADOS DE LUGARES Y API
-  // =========================================================
 
   // Lugares cargados desde Supabase mediante la API.
   const [places, setPlaces] = useState([]);
 
   // Error al conectar con el backend.
   const [apiError, setApiError] = useState("");
-
-
-  // =========================================================
-  // ESTADOS DE LA RUTA
-  // =========================================================
 
   // Ciudad seleccionada en RoutesPanel.
   const [selectedCity, setSelectedCity] = useState("");
@@ -62,11 +47,6 @@ const HomePage = () => {
 
   // Itinerario seleccionado para mostrar su resumen
   const [ selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
-  
-  
-  // =========================================================
-  // ESTADOS DEL MAPA
-  // =========================================================
 
   // Información del punto libre seleccionado en el mapa.
   const [selectedPoint, setSelectedPoint] = useState(null);
@@ -77,10 +57,6 @@ const HomePage = () => {
   const [isDrawingZone] = useState(false);
   const [tempZone] = useState([]);
 
-
-  // =========================================================
-  // CARGAR LUGARES
-  // =========================================================
 
   // Carga los lugares desde el backend al abrir la página.
   useEffect(() => {
@@ -120,8 +96,7 @@ const HomePage = () => {
   // RECUPERAR ZONA SELECCIONADA
   // =========================================================
 
-  // Mantiene la compatibilidad con las zonas guardadas
-  // anteriormente en localStorage.
+  // Mantiene la compatibilidad con las zonas guardadas anteriormente en localStorage.
   useEffect(() => {
     const selectedZoneKey =
       `selectedZone:${authUser}`;
