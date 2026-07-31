@@ -113,6 +113,7 @@ const RoutesPanel = ({
   onChangeSelectedPlaceIds,
   routeResult,
   onRouteCalculated,
+  onSelectItinerary,
   onChangeRouteDate,
 }) => {
 
@@ -443,6 +444,8 @@ const RoutesPanel = ({
     setSelectedItineraryId(
       itinerary.itinerary_id
     );
+    
+    onSelectItinerary?.(itinerary);
 
     setError("");
 

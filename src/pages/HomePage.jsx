@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import RoutesPanel from "@/components/RoutesPanel";
 import { useApi } from "@/hooks/useApi";
+import ItinerarySummaryPanel from "@/components/ItinerarySummaryPanel";
 
 
 // =========================================================
@@ -59,7 +60,10 @@ const HomePage = () => {
   // Modo real utilizado para calcular la ruta.
   const [routeMode, setRouteMode] = useState("drive");
 
-
+  // Itinerario seleccionado para mostrar su resumen
+  const [ selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
+  
+  
   // =========================================================
   // ESTADOS DEL MAPA
   // =========================================================
@@ -312,6 +316,7 @@ const HomePage = () => {
 
     setRouteResult(null);
     setSelectedPoint(null);
+    setSelectedItineraryDetail(null);
   };
 
   // Al cambiar los lugares de destino,
@@ -320,6 +325,7 @@ const HomePage = () => {
     setSelectedPlaceIds(placeIds);
     setRouteResult(null);
     setSelectedPoint(null);
+    setSelectedItineraryDetail(null);
   };
 
 
@@ -384,6 +390,7 @@ const HomePage = () => {
             onChangeSelectedPlaceIds={handleChangeSelectedPlaces}
             routeResult={routeResult}
             onRouteCalculated={handleRouteCalculated}
+            onSelectItinerary={setSelectedItineraryDetail}
             onChangeRouteDate={setSelectedRouteDate}
           />
         </aside>
@@ -404,6 +411,16 @@ const HomePage = () => {
             selectedCity={selectedCity}
             selectedDate={selectedRouteDate}
           />
+
+          {selectedItineraryDetail && (
+            <ItinerarySummaryPanel
+              itinerary={selectedItineraryDetail}
+              places={places}
+              onClose={() =>
+                setSelectedItineraryDetail(null)
+              }
+            />
+          )}
 
 
           {/* TARJETA DE PUNTO SELECCIONADO */}
