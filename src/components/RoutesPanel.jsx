@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 import { Route as RouteIcon, Car, Footprints, Bike,BusFront, Sparkles, Navigation, Clock, } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 
-// =========================================================
-// MODOS DE TRANSPORTE
-// =========================================================
-
-// Mantenemos los mismos identificadores utilizados en la API
-// y en el resto del frontend.
+/**
+ * MODOS DE TRANSPORTE
+ * 
+ * El usuario elige hasta 3 metodos de trasnporte para calclar la ruta. 
+ * Si elige los 3, se considera la opción "Mejor" que combina los 3 modos.
+ * Modos disponibles: coche, a pie, bicicleta. El modo bus está deshabilitado por ahora.
+*/
 const TRANSPORT_MODES = [
   {
     id: "good",
@@ -40,9 +41,6 @@ const TRANSPORT_MODES = [
   },
 ];
 
-// Modos que se intentarán comprobar cuando el usuario seleccione "Mejor".
-const ROUTABLE_MODES = ["drive", "walk", "bike"];
-
 // Traducción de los identificadores para mostrarlos en la interfaz.
 const MODE_LABELS = {
   good: "Mejor opción",
@@ -54,11 +52,11 @@ const MODE_LABELS = {
 };
 
 
-// =========================================================
-// CIUDADES
-// =========================================================
-
-// Lista de ciudades disponibles actualmente en la aplicación.
+/**
+ * CIUDADES
+ * 
+ * 4 Ciudades disponibles: Alicante, Jávea, Valencia y Torrevieja.
+*/
 const ALL_CITIES = [
   { value: "alicante", label: "Alicante" },
   { value: "javea", label: "Jávea" },
@@ -66,10 +64,6 @@ const ALL_CITIES = [
   { value: "torrevieja", label: "Torrevieja" },
 ];
 
-
-// =========================================================
-// FUNCIONES AUXILIARES
-// =========================================================
 
 // Normaliza textos para comparar ciudades ignorando mayúsculas, minúsculas y acentos.
 const normalizeText = (text = "") =>
@@ -81,9 +75,6 @@ const normalizeText = (text = "") =>
 
 
 // Formatea una duración en minutos.
-// Ejemplos:
-// 35 → "35 min"
-// 90 → "1 h 30 min"
 const formatDuration = (minutes = 0) => {
   const roundedMinutes = Math.max(0, Math.round(minutes));
   const hours = Math.floor(roundedMinutes / 60);
@@ -100,26 +91,21 @@ const formatDuration = (minutes = 0) => {
   return `${hours} h ${remainingMinutes} min`;
 };
 
-
-// =========================================================
-// COMPONENTE PRINCIPAL
-// =========================================================
-const RoutesPanel = ({
-  selectedCity,
-  onChangeCity,
-  places = [],
-  selectedPlaceIds = [],
-  onChangeSelectedPlaceIds,
-  routeResult,
-  onRouteCalculated,
-  onSelectItinerary,
-  onChangeRouteDate,
-}) => {
+  const RoutesPanel = ({
+    selectedCity,
+    onChangeCity,
+    places = [],
+    selectedPlaceIds = [],
+    onChangeSelectedPlaceIds,
+    selectedModes = [],
+    onSelectedModesChange,
+    routeResult,
+    onRouteCalculated,
+    onSelectItinerary,
+    onChangeRouteDate,
+  }) => {
 
   const { fetchApi } = useApi();
-
-  // Modo de transporte seleccionado.
-  const [mode, setMode] = useState("good");
 
   // Fecha y hora de inicio del itinerario.
   const [date, setDate] = useState("");
@@ -139,10 +125,9 @@ const RoutesPanel = ({
   const [error, setError] = useState("");
 
 
-  // =========================================================
-  // LUGARES DE LA CIUDAD SELECCIONADA
-  // =========================================================
-
+  /**
+   * LUGARES DE LA CIUDAD SELECCIONADA
+  */ 
   // Filtra los lugares de Supabase por la ciudad seleccionada.
   const cityPlaces = useMemo(() => {
     if (!selectedCity) {
@@ -168,9 +153,9 @@ const RoutesPanel = ({
   }, [cityPlaces, selectedPlaceIds]);
 
 
-  // =========================================================
-  // CAMBIO DE CIUDAD
-  // =========================================================
+  /**
+ * CAMBIO DE CIUDAD
+ */ 
 
   const handleChangeCity = (city) => {
     // Informa a HomePage de la nueva ciudad.
@@ -201,9 +186,9 @@ const RoutesPanel = ({
     setError("");
   };
 
-  // =========================================================
-  // BUSCAR ITINERARIOS EN LA API
-  // =========================================================
+  /**
+    * BUSCAR ITINERARIOS EN LA API
+  */ 
   const handleSearchItineraries = async () => {
     setError("");
 
@@ -226,17 +211,12 @@ const RoutesPanel = ({
       return;
     }
 
-    if (mode === "drive_service") {
-      setError(
-        "Las rutas de autobús todavía no están disponibles."
-      );
+    if (selectedModes.length === 0) {
+      setError("Selecciona al menos un modo de transporte.");
       return;
     }
-
-    const allowedModes =
-      mode === "good"
-        ? ["drive", "walk", "bike"]
-        : [mode];
+    // Comprobamos que haya al menos un modo seleccionado.
+    const allowedModes = selectedModes;
 
     setSearching(true);
     setItineraries([]);
@@ -303,9 +283,9 @@ const RoutesPanel = ({
   };
 
 
-  // =========================================================
-  // SELECCIONAR UN ITINERARIO
-  // =========================================================
+  /**
+    * SELECCIONAR UN ITINERARIO
+   */ 
   const handleSelectItinerary = (itinerary) => {
     const itineraryRoutes = [
       ...(itinerary.routes || []),
@@ -445,10 +425,9 @@ const RoutesPanel = ({
     );
   };
 
-  // =========================================================
-  // INTERFAZ
-  // =========================================================
-
+  /**
+    * INTERFAZ
+   */
   return (
     <div className="flex flex-col gap-4">
       {/* TÍTULO */}
@@ -467,7 +446,17 @@ const RoutesPanel = ({
         <div className="flex gap-1.5">
           {TRANSPORT_MODES.map((transportMode) => {
             const IconComp = transportMode.icon;
-            const isActive = mode === transportMode.id;
+
+            const isBestMode =
+              selectedModes.length === 3 &&
+              selectedModes.includes("drive") &&
+              selectedModes.includes("walk") &&
+              selectedModes.includes("bike");
+
+            const isActive =
+              transportMode.id === "good"
+                ? isBestMode
+                : !isBestMode && selectedModes.includes(transportMode.id);
 
             return (
               <button
@@ -475,20 +464,65 @@ const RoutesPanel = ({
                 type="button"
                 disabled={transportMode.disabled}
                 onClick={() => {
-                  setMode(transportMode.id);
+                  if (transportMode.disabled) return;
+
+                  // Pulsar "Mejor"
+                  if (transportMode.id === "good") {
+                    onSelectedModesChange(["drive", "walk", "bike"]);
+                    return;
+                  }
+
+                  const isBestMode =
+                  selectedModes.length === 3 &&
+                  selectedModes.includes("drive") &&
+                  selectedModes.includes("walk") &&
+                  selectedModes.includes("bike");
+
+                // Si está activo "Mejor" y pulsa un modo, cambiamos directamente a ese modo.
+                if (
+                  isBestMode &&
+                  transportMode.id !== "good"
+                ) {
+                  onSelectedModesChange([transportMode.id]);
+                  setError("");
+                  return;
+                }
+                  let newModes;
+
+                  if (selectedModes.includes(transportMode.id)) {
+                  newModes = selectedModes.filter(
+                    (m) => m !== transportMode.id
+                  );
+                } else {
+                  newModes = [...selectedModes, transportMode.id];
+                }
+
+                // Si están los tres modos, equivale a "Mejor"
+                const hasAllModes =
+                  newModes.includes("drive") &&
+                  newModes.includes("walk") &&
+                  newModes.includes("bike");
+
+                if (hasAllModes) {
+                  onSelectedModesChange(["drive", "walk", "bike"]);
+                  setError("");
+                  return;
+                }
+
+                // Nunca dejar vacío
+                if (newModes.length === 0) {
+                  newModes = ["drive"];
+                }
+
+                onSelectedModesChange(newModes);
                   setError("");
                 }}
-                title={
-                  transportMode.disabled
-                    ? "Disponible próximamente"
-                    : transportMode.label
-                }
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-md text-[10px] font-medium transition-all duration-150 border ${
                   transportMode.disabled
                     ? "opacity-40 cursor-not-allowed border-border bg-secondary text-muted-foreground"
                     : isActive
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-border bg-card text-foreground hover:border-accent/50"
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border bg-card text-foreground hover:border-accent/50"
                 }`}
               >
                 <IconComp className="w-4 h-4" />

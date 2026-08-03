@@ -41,9 +41,12 @@ const HomePage = () => {
 
   // Resultado de la ruta calculada por OSRM.
   const [routeResult, setRouteResult] = useState(null);
-
-  // Modo real utilizado para calcular la ruta.
+ 
+  // Modo con el que finalmente se ha calculado la ruta.
   const [routeMode, setRouteMode] = useState("drive");
+  
+  // Usuario selecciona su modo de transporte para la ruta.
+  const [selectedModes, setSelectedModes] = useState([ "drive", "walk", "bike" ]);
 
   // Itinerario seleccionado para mostrar su resumen
   const [ selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
@@ -363,6 +366,8 @@ const HomePage = () => {
             places={places}
             selectedPlaceIds={selectedPlaceIds}
             onChangeSelectedPlaceIds={handleChangeSelectedPlaces}
+            selectedModes={selectedModes}
+            onSelectedModesChange={setSelectedModes}
             routeResult={routeResult}
             onRouteCalculated={handleRouteCalculated}
             onSelectItinerary={setSelectedItineraryDetail}

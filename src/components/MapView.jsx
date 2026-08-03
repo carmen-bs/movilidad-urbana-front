@@ -886,8 +886,7 @@ const MapView = ({
             return;
           }
 
-          // Utiliza el color correspondiente
-          // al modo de transporte.
+          // Utiliza el color correspondiente al modo de transporte.
           const style =
             routeStyles[segment.mode] ||
             routeStyles[routeMode] ||
