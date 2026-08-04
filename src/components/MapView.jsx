@@ -773,7 +773,17 @@ const MapView = ({
         (segment) =>
           segment?.geometry?.coordinates?.length
       );
+      
+    console.log("routeResult", routeResult);
 
+    if (routeResult?.segments) {
+      console.log(
+        routeResult.segments.map((s) => ({
+          mode: s.mode,
+          coords: s.geometry?.coordinates?.length,
+        }))
+      );
+    }
 
     // =======================================================
     // LUGARES DE LA CIUDAD
@@ -781,247 +791,162 @@ const MapView = ({
 
     // Los lugares se muestran cuando todavía
     // no hay una ruta calculada.
-    if (!hasRoute) {
-      places.forEach((place) => {
-        const latitude =
-          Number(place.lat);
+    if (hasRoute) {
+      console.log("========== DIBUJANDO RUTA ==========");
+      console.log("routeResult:", routeResult);
 
-        const longitude =
-          Number(
-            place.lon ?? place.lng
-          );
+      const routeLayers = [];
 
-        // Ignora lugares sin coordenadas válidas.
-        if (
-          !Number.isFinite(latitude) ||
-          !Number.isFinite(longitude)
-        ) {
+      routeResult.segments.forEach((segment, index) => {
+        console.log(`SEGMENTO ${index}`, segment);
+
+        if (!segment?.geometry) {
+          console.warn("Segmento sin geometry");
           return;
         }
 
-        const safeName =
-          escapeHtml(
-            place.name || "Lugar"
-          );
-
-        const safeDescription =
-          escapeHtml(
-            place.description || ""
-          );
-
-
-        const marker = L.marker([
-          latitude,
-          longitude,
-        ]).addTo(group);
-
-
-        // Popup inicial.
-        marker.bindPopup(`
-          <div>
-            <strong>${safeName}</strong>
-            <br/>
-
-            ${safeDescription}
-
-            <br/><br/>
-
-            <span style="color:#666;">
-              Cargando horarios...
-            </span>
-          </div>
-        `);
-
-
-        // Al abrir el popup se consultan
-        // los horarios del lugar.
-        marker.on(
-          "popupopen",
-          async () => {
-            const hours =
-              await onLoadPlaceHours?.(
-                place.place_id
-              );
-
-            const hoursHtml =
-              formatTodayPlaceHours(
-                hours,
-                selectedDate
-              );
-
-            marker.setPopupContent(`
-              <div>
-                <strong>${safeName}</strong>
-                <br/>
-
-                ${safeDescription}
-
-                <br/><br/>
-
-                <strong>Horarios:</strong>
-
-                ${hoursHtml}
-              </div>
-            `);
-          }
+        console.log("Tipo:", segment.geometry.type);
+        console.log(
+          "Nº coordenadas:",
+          segment.geometry.coordinates?.length
         );
-      });
-    }
 
+        const style =
+          routeStyles[segment.mode] ||
+          routeStyles[routeMode] ||
+          routeStyles.drive;
 
-    // =======================================================
-    // RUTA CALCULADA POR OSRM
-    // =======================================================
+        try {
+          const layer = L.geoJSON(segment.geometry, {
+            style,
+          });
 
-    if (hasRoute) {
-      const routeLayers = [];
+          console.log(
+            "Bounds del segmento:",
+            layer.getBounds().toBBoxString()
+          );
 
+          layer.addTo(group);
+          routeLayers.push(layer);
 
-      // Pinta cada segmento de la ruta.
-      routeResult.segments.forEach(
-        (segment) => {
-          if (
-            !segment?.geometry?.coordinates?.length
-          ) {
-            return;
-          }
-
-          // Utiliza el color correspondiente al modo de transporte.
-          const style =
-            routeStyles[segment.mode] ||
-            routeStyles[routeMode] ||
-            routeStyles.drive;
-
-
-          // OSRM devuelve la geometría en GeoJSON.
-          const routeLayer = L.geoJSON(
-            segment.geometry,
-            {
-              style,
-            }
-          ).addTo(group);
-
-          routeLayers.push(
-            routeLayer
+          console.log("Segmento añadido correctamente");
+        } catch (e) {
+          console.error(
+            "ERROR creando GeoJSON",
+            e,
+            segment.geometry
           );
         }
+      });
+
+      console.log(
+        "Número de layers creados:",
+        routeLayers.length
       );
 
-      // =======================================================
-      // MARCADORES A, B, C...
-      // =======================================================
+      // ===================================================
+      // MARCADORES
+      // ===================================================
 
-      // Recupera todos los destinos de la ruta.
-      //
-      // Se mantiene la compatibilidad con rutas antiguas
-      // que solo tengan destCoord.
       const destinationCoords =
         Array.isArray(routeResult.destinationCoords) &&
         routeResult.destinationCoords.length > 0
           ? routeResult.destinationCoords
           : routeResult.destCoord
-            ? [routeResult.destCoord]
-            : [];
+          ? [routeResult.destCoord]
+          : [];
 
       const destinationLabels =
         Array.isArray(routeResult.destinationLabels)
           ? routeResult.destinationLabels
           : [];
 
-
-      // El primer punto será el origen.
-      // Los siguientes serán los destinos.
       const routePoints = [
         {
           coord: routeResult.originCoord,
           label:
-            routeResult.originLabel ||
+            routeResult.originLabel ??
             "Origen",
         },
 
         ...destinationCoords.map(
           (coord, index) => ({
             coord,
-
             label:
-              destinationLabels[index] ||
+              destinationLabels[index] ??
               `Destino ${index + 1}`,
           })
         ),
       ];
 
+      console.log("Puntos:", routePoints);
 
-      // Crea un marcador para cada punto:
-      // A, B, C, D...
-      routePoints.forEach(
-        (routePoint, index) => {
-          const latitude =
-            Number(routePoint.coord?.lat);
+      routePoints.forEach((point, index) => {
+        if (!point.coord) return;
 
-          const longitude =
-            Number(routePoint.coord?.lng);
+        const lat = Number(point.coord.lat);
+        const lng = Number(point.coord.lng);
 
-          if (
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(longitude)
-          ) {
-            return;
-          }
+        console.log(
+          `Marcador ${index}`,
+          lat,
+          lng
+        );
 
-          const letter =
-            getRouteLetter(index);
-
-          // El origen será azul.
-          // Los destinos serán rojos.
-          const backgroundColor =
-            index === 0
-              ? "#2563EB"
-              : "#DC2626";
-
-          const markerIcon =
-            getRouteMarkerIcon(
-              letter,
-              backgroundColor
-            );
-
-          L.marker(
-            [latitude, longitude],
-            {
-              icon: markerIcon,
-              zIndexOffset: 1000 + index,
-            }
-          )
-            .bindPopup(
-              escapeHtml(
-                routePoint.label
-              )
-            )
-            .addTo(group);
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng)
+        ) {
+          console.warn(
+            "Coordenadas inválidas"
+          );
+          return;
         }
-      );
 
-      // Ajusta el mapa para mostrar
-      // la ruta completa.
+        L.marker(
+          [lat, lng],
+          {
+            icon: getRouteMarkerIcon(
+              getRouteLetter(index),
+              index === 0
+                ? "#2563EB"
+                : "#DC2626"
+            ),
+          }
+        )
+          .bindPopup(
+            escapeHtml(point.label)
+          )
+          .addTo(group);
+      });
+
       if (routeLayers.length > 0) {
         const featureGroup =
-          L.featureGroup(
-            routeLayers
-          );
+          L.featureGroup(routeLayers);
 
         const bounds =
           featureGroup.getBounds();
 
+        console.log(
+          "Bounds finales:",
+          bounds.toBBoxString()
+        );
+
         if (bounds.isValid()) {
-          map.fitBounds(
-            bounds,
-            {
-              paddingTopLeft: [60, 60],
-              paddingBottomRight: [60, 60],
-              maxZoom: 16,
-            }
+          console.log("Haciendo fitBounds");
+
+          map.fitBounds(bounds, {
+            padding: [60, 60],
+            maxZoom: 16,
+          });
+        } else {
+          console.warn(
+            "Bounds NO válidos"
           );
         }
       }
+
+      console.log("========== FIN RUTA ==========");
     }
 
 

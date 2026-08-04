@@ -99,7 +99,6 @@ const formatDuration = (minutes = 0) => {
     onChangeSelectedPlaceIds,
     selectedModes = [],
     onSelectedModesChange,
-    routeResult,
     onRouteCalculated,
     onSelectItinerary,
     onChangeRouteDate,
@@ -140,19 +139,7 @@ const formatDuration = (minutes = 0) => {
     );
   }, [places, selectedCity]);
 
-
-  // Obtiene los objetos completos de los lugares seleccionados.
-  const selectedPlaces = useMemo(() => {
-    return selectedPlaceIds
-      .map((placeId) =>
-        cityPlaces.find(
-          (place) => place.place_id === placeId
-        )
-      )
-      .filter(Boolean);
-  }, [cityPlaces, selectedPlaceIds]);
-
-
+  
   /**
  * CAMBIO DE CIUDAD
  */ 
@@ -249,6 +236,8 @@ const formatDuration = (minutes = 0) => {
         true
       );
 
+      console.log("Respuesta API:", data);
+      
       const generatedItineraries =
         Array.isArray(data?.itineraries)
           ? data.itineraries
@@ -419,6 +408,28 @@ const formatDuration = (minutes = 0) => {
 
     setError("");
 
+    console.log(
+      result.segments.map(segment => ({
+        mode: segment.mode,
+        geometry: !!segment.geometry,
+      }))
+    );
+
+    console.log("RESULTADO COMPLETO");
+    console.log(result);
+
+    result.segments.forEach((segment, i) => {
+      console.log(
+        "SEGMENTO",
+        i,
+        segment.geometry.type,
+        segment.geometry.coordinates.length
+      );
+    });
+
+    console.log("RESULTADO JSON");
+    console.log(JSON.stringify(result, null, 2));
+    
     onRouteCalculated?.(
       result,
       modesUsed[0] || "drive"

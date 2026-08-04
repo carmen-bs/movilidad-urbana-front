@@ -7,19 +7,6 @@ import { useApi } from "@/hooks/useApi";
 import ItinerarySummaryPanel from "@/components/ItinerarySummaryPanel";
 
 
-// =========================================================
-// FUNCIONES AUXILIARES
-// =========================================================
-
-// Normaliza textos para comparar nombres de ciudades, ignorando mayúsculas, minúsculas y acentos.
-const normalizeText = (text = "") =>
-  text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-
-
 const HomePage = () => {
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
