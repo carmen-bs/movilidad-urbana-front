@@ -766,13 +766,49 @@ const MapView = ({
     group.clearLayers();
 
 
+    // =======================================================
+// MARCADORES DE LOS LUGARES SELECCIONADOS
+// =======================================================
+
+places.forEach((place) => {
+  const lat = Number(place.lat);
+  const lng = Number(place.lon);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ) {
+    console.warn(
+      "Lugar con coordenadas inválidas:",
+      place
+    );
+    return;
+  }
+
+  const marker = L.marker([lat, lng]);
+
+  const placeName =
+    place.name ||
+    place.nombre ||
+    "Lugar";
+
+  marker.bindPopup(
+    `<strong>${escapeHtml(placeName)}</strong>`
+  );
+
+  marker.addTo(group);
+});
+
     // Comprueba si existe una ruta válida.
     const hasRoute =
       Array.isArray(routeResult?.segments) &&
-      routeResult.segments.some(
+      routeResult.segments.length > 0 &&
+      routeResult.segments.every(
         (segment) =>
-          segment?.geometry?.coordinates?.length
-      );
+          segment?.geometry?.type === "LineString" &&
+          Array.isArray(segment?.geometry?.coordinates) &&
+          segment.geometry.coordinates.length >= 2
+);
       
     console.log("routeResult", routeResult);
 
@@ -817,9 +853,11 @@ const MapView = ({
           routeStyles.drive;
 
         try {
-          const layer = L.geoJSON(segment.geometry, {
-            style,
-          });
+          const latLngs = segment.geometry.coordinates.map(
+            ([lng, lat]) => [lat, lng]
+          );
+
+          const layer = L.polyline(latLngs, style);
 
           console.log(
             "Bounds del segmento:",
@@ -829,12 +867,14 @@ const MapView = ({
           layer.addTo(group);
           routeLayers.push(layer);
 
-          console.log("Segmento añadido correctamente");
+          console.log(
+            `Segmento ${index} añadido correctamente al mapa`
+          );
         } catch (e) {
           console.error(
-            "ERROR creando GeoJSON",
+            "ERROR creando segmento",
             e,
-            segment.geometry
+            segment
           );
         }
       });

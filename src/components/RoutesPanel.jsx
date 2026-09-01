@@ -272,52 +272,62 @@ const formatDuration = (minutes = 0) => {
   };
 
 
-  /**
-    * SELECCIONAR UN ITINERARIO
-   */ 
-  const handleSelectItinerary = (itinerary) => {
-    const itineraryRoutes = [
-      ...(itinerary.routes || []),
-    ].sort(
-      (first, second) =>
-        first.route_order -
-        second.route_order
-    );
 
-    // Recupera los lugares completos para obtener sus coordenadas.
-    const orderedPlaces = (
-      itinerary.place_ids || []
-    )
+  
+/**
+ * SELECCIONAR UN ITINERARIO
+ */
+const handleSelectItinerary = (itinerary) => {
+  try {
+    console.log("========== ITINERARIO SELECCIONADO ==========");
+    console.log("ITINERARIO:", itinerary);
+
+    if (!itinerary) {
+      setError("No se ha seleccionado el itinerario.");
+      return;
+    }
+
+    /**
+     * 1. RECUPERAR LOS LUGARES DEL ITINERARIO
+     *
+     * El backend guarda place_ids en el orden:
+     * A → B → C
+     */
+    const orderedPlaces = (itinerary.place_ids || [])
       .map((placeId) =>
         places.find(
           (place) =>
-            place.place_id === placeId
+            place.place_id === placeId ||
+            place.id === placeId
         )
       )
       .filter(Boolean);
 
+    console.log(
+      "LUGARES DEL ITINERARIO:",
+      orderedPlaces.map((place) => place.name)
+    );
+
     if (orderedPlaces.length < 2) {
       setError(
-        "No se encontraron las coordenadas del itinerario."
+        "No se encontraron los lugares del itinerario."
       );
       return;
     }
 
-    const coordinates = orderedPlaces.map(
-      (place) => ({
-        lat: Number(place.lat),
-        lng: Number(
-          place.lon ?? place.lng
-        ),
-      })
-    );
+    /**
+     * 2. COMPROBAR COORDENADAS
+     */
+    const coordinates = orderedPlaces.map((place) => ({
+      lat: Number(place.lat),
+      lng: Number(place.lon ?? place.lng),
+    }));
 
-    const hasInvalidCoordinate =
-      coordinates.some(
-        (coordinate) =>
-          !Number.isFinite(coordinate.lat) ||
-          !Number.isFinite(coordinate.lng)
-      );
+    const hasInvalidCoordinate = coordinates.some(
+      (coordinate) =>
+        !Number.isFinite(coordinate.lat) ||
+        !Number.isFinite(coordinate.lng)
+    );
 
     if (hasInvalidCoordinate) {
       setError(
@@ -326,40 +336,296 @@ const formatDuration = (minutes = 0) => {
       return;
     }
 
-    const originCoord = coordinates[0];
-    const destinationCoords =
-      coordinates.slice(1);
+  
+  /**
+  * 3. RECUPERAR Y VALIDAR LAS RUTAS CALCULADAS POR EL BACKEND
+  *
+  * Cada ruta debe conectar exactamente dos lugares consecutivos:
+  *
+  * A → B
+  * B → C
+  * C → D
+    */
 
-    const modesUsed =
-      itinerary.modes_used || [];
+  let itineraryRoutes = Array.isArray(itinerary.routes)
+  ? [...itinerary.routes]
+  : [];
+
+  console.log(
+  "========== RUTAS RECIBIDAS DEL BACKEND =========="
+  );
+
+  console.log(
+  "RUTAS RECIBIDAS:",
+  itineraryRoutes
+  );
+
+  /**
+  * Ordenamos primero por route_order.
+  */
+    itineraryRoutes.sort(
+    (a, b) =>
+    Number(a.route_order ?? 0) -
+    Number(b.route_order ?? 0)
+    );
+
+  console.log(
+  "========== RUTAS ORDENADAS =========="
+  );
+
+  itineraryRoutes.forEach((route, index) => {
+  console.log(`RUTA ${index}:`, {
+  route_order: route.route_order,
+  from: route.previous_place_id,
+  to: route.place_id,
+  mode: route.transport_mode,
+  hasGeometry: Boolean(
+  route.route_geometry?.coordinates?.length >= 2
+  ),
+  coordinates:
+  route.route_geometry?.coordinates?.length,
+  });
+  });
+
+  /**
+  * 4. BUSCAR EXACTAMENTE LOS TRAMOS QUE CORRESPONDEN
+  * A LOS LUGARES DEL ITINERARIO.
+  *
+  * Para:
+  * A → B → C
+  *
+  * buscamos:
+  * tramo 1 = A → B
+  * tramo 2 = B → C
+  */
+
+  const expectedSegments = orderedPlaces.length - 1;
+
+  console.log(
+  "========== VALIDANDO CONEXIONES =========="
+  );
+
+  console.log(
+  "TRAMOS ESPERADOS:",
+  expectedSegments
+  );
+
+  const validRoutes = [];
+
+  for (let index = 0; index < expectedSegments; index++) {
+  const fromPlace = orderedPlaces[index];
+  const toPlace = orderedPlaces[index + 1];
+
+  const fromId =
+  fromPlace.place_id ?? fromPlace.id;
+
+  const toId =
+  toPlace.place_id ?? toPlace.id;
+
+  console.log(
+  `Buscando tramo ${index}:`,
+  {
+  from: {
+  id: fromId,
+  name: fromPlace.name,
+  },
+  to: {
+  id: toId,
+  name: toPlace.name,
+  },
+  }
+  );
+
+  const matchingRoute = itineraryRoutes.find(
+  (route) => {
+  if (
+  !route ||
+  !route.route_geometry ||
+  !Array.isArray(
+  route.route_geometry.coordinates
+  ) ||
+  route.route_geometry.coordinates.length < 2
+  ) {
+  return false;
+  }
+
+    const routeFrom =
+      route.previous_place_id ??
+      route.from_place_id ??
+      route.origin_place_id;
+
+    const routeTo =
+      route.place_id ??
+      route.to_place_id ??
+      route.destination_place_id;
+
+    return (
+      String(routeFrom) === String(fromId) &&
+      String(routeTo) === String(toId)
+    );
+  }
+  );
+
+  if (matchingRoute) {
+  console.log(
+  `✓ TRAMO ENCONTRADO ${index}:`,
+  {
+  route_order:
+  matchingRoute.route_order,
+  from:
+  matchingRoute.previous_place_id,
+  to:
+  matchingRoute.place_id,
+  mode:
+  matchingRoute.transport_mode,
+  coordinates:
+  matchingRoute.route_geometry
+  ?.coordinates?.length,
+  }
+  );
+
+  validRoutes.push(matchingRoute);
+  } else {
+  console.error("✗ NO SE ENCONTRÓ EL TRAMO ${index}",
+  {
+  expectedFrom: {
+  id: fromId,
+  name: fromPlace.name,
+  },
+  expectedTo: {
+  id: toId,
+  name: toPlace.name,
+  },
+  }
+  );
+  }
+  }
+
+  console.log(
+  "========== RESULTADO VALIDACIÓN =========="
+  );
+
+  console.log(
+  "TRAMOS ESPERADOS:",
+  expectedSegments
+  );
+
+  console.log(
+  "TRAMOS VÁLIDOS ENCONTRADOS:",
+  validRoutes.length
+  );
+
+  console.log(
+  "RUTAS VÁLIDAS PARA PINTAR:",
+  validRoutes
+  );
+
+  /**
+  * Si no encontramos todos los tramos,
+  * NO dibujamos una ruta incompleta.
+  */
+    if (validRoutes.length !== expectedSegments) {
+    setError(
+    `No se encontraron todos los tramos de la ruta. Esperados: ${expectedSegments}, encontrados: ${validRoutes.length}.`
+    );
+
+  console.error(
+  "========== ERROR DE CONEXIÓN ENTRE TRAMOS =========="
+  );
+
+  console.error(
+  "Lugares ordenados:",
+  orderedPlaces.map((place) => ({
+  id: place.place_id ?? place.id,
+  name: place.name,
+  }))
+  );
+
+  console.error(
+  "Rutas disponibles:",
+  itineraryRoutes.map((route) => ({
+  route_order: route.route_order,
+  from:
+  route.previous_place_id ??
+  route.from_place_id ??
+  route.origin_place_id,
+  to:
+  route.place_id ??
+  route.to_place_id ??
+  route.destination_place_id,
+  hasGeometry: Boolean(
+  route.route_geometry?.coordinates?.length >= 2
+  ),
+  }))
+  );
+
+  return;
+  }
+
+
+    /**
+     * 5. CONSTRUIR LOS SEGMENTOS PARA MAPVIEW
+     */
+    const segments = validRoutes.map((route) => ({
+      geometry: route.route_geometry,
+      mode: route.transport_mode || "drive",
+
+      // Datos útiles para depuración
+      route_order: route.route_order,
+      place_id: route.place_id,
+      place_name: route.place_name,
+      previous_place_id: route.previous_place_id,
+    }));
+
+    console.log(
+      "SEGMENTOS FINALES:",
+      segments
+    );
+
+    segments.forEach((segment, index) => {
+      console.log(
+        `SEGMENTO ${index}:`,
+        {
+          route_order: segment.route_order,
+          from: segment.previous_place_id,
+          to: segment.place_id,
+          place: segment.place_name,
+          mode: segment.mode,
+          coordinates:
+            segment.geometry?.coordinates?.length,
+        }
+      );
+    });
+
+    /**
+     * 6. COORDENADAS PARA MAPVIEW
+     */
+    const originCoord = coordinates[0];
+
+    const destinationCoords = coordinates.slice(1);
+
+    const destCoord =
+      destinationCoords[destinationCoords.length - 1];
+
+    /**
+     * 7. MODO DE TRANSPORTE
+     */
+    const modesUsed = itinerary.modes_used || [];
 
     const calculatedMode =
       modesUsed.length === 1
         ? modesUsed[0]
         : "mixed";
 
+    /**
+     * 8. RESULTADO FINAL PARA MAPVIEW
+     */
     const result = {
-      // Cada trayecto guardado incluye su geometría.
-      segments: itineraryRoutes
-        .filter(
-          (route) =>
-            route.route_geometry
-        )
-        .map((route) => ({
-          geometry:
-            route.route_geometry,
-
-          mode:
-            route.transport_mode ||
-            "drive",
-        })),
+      segments,
 
       originCoord,
 
-      destCoord:
-        destinationCoords[
-          destinationCoords.length - 1
-        ],
+      destCoord,
 
       destinationCoords,
 
@@ -381,8 +647,7 @@ const formatDuration = (minutes = 0) => {
         Math.round(
           (
             Number(
-              itinerary.total_distance_m ||
-                0
+              itinerary.total_distance_m || 0
             ) / 1000
           ) * 10
         ) / 10,
@@ -400,41 +665,63 @@ const formatDuration = (minutes = 0) => {
       itineraryRoutes,
     };
 
+    /**
+     * 9. GUARDAR ITINERARIO SELECCIONADO
+     */
     setSelectedItineraryId(
       itinerary.itinerary_id
     );
-    
+
     onSelectItinerary?.(itinerary);
 
     setError("");
 
+    /**
+     * 10. DEBUG FINAL
+     */
     console.log(
-      result.segments.map(segment => ({
-        mode: segment.mode,
-        geometry: !!segment.geometry,
-      }))
+      "========== RESULTADO FINAL RUTA =========="
     );
 
-    console.log("RESULTADO COMPLETO");
-    console.log(result);
+    console.log(
+      JSON.stringify(result, null, 2)
+    );
 
-    result.segments.forEach((segment, i) => {
-      console.log(
-        "SEGMENTO",
-        i,
-        segment.geometry.type,
-        segment.geometry.coordinates.length
-      );
-    });
+    result.segments.forEach(
+      (segment, index) => {
+        console.log(
+          "SEGMENTO",
+          index,
+          {
+            mode: segment.mode,
+            geometryType:
+              segment.geometry?.type,
+            coordinates:
+              segment.geometry?.coordinates?.length,
+          }
+        );
+      }
+    );
 
-    console.log("RESULTADO JSON");
-    console.log(JSON.stringify(result, null, 2));
-    
+    /**
+     * 11. PASAR RESULTADO A MAPVIEW
+     */
     onRouteCalculated?.(
       result,
       modesUsed[0] || "drive"
     );
-  };
+  } catch (error) {
+    console.error(
+      "Error seleccionando itinerario:",
+      error
+    );
+
+    setError(
+      "No se pudo mostrar el itinerario."
+    );
+  }
+};
+
 
   /**
     * INTERFAZ
