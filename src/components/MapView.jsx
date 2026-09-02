@@ -69,9 +69,8 @@ function getRouteMarkerIcon(letter, backgroundColor) {
  * 2 → C
  */
 function getRouteLetter(index) {
-  return String.fromCharCode(
-    65 + index
-  );
+  const letters = ["A", "B", "C", "D", "E", "F"];
+  return letters[index] ?? "?";
 }
 
 // =========================================================
@@ -766,40 +765,11 @@ const MapView = ({
     group.clearLayers();
 
 
-    // =======================================================
-// MARCADORES DE LOS LUGARES SELECCIONADOS
+// =======================================================
+//  COMPROBAR SI EXISTE UNA RUTA VÁLIDA
 // =======================================================
 
-places.forEach((place) => {
-  const lat = Number(place.lat);
-  const lng = Number(place.lon);
-
-  if (
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lng)
-  ) {
-    console.warn(
-      "Lugar con coordenadas inválidas:",
-      place
-    );
-    return;
-  }
-
-  const marker = L.marker([lat, lng]);
-
-  const placeName =
-    place.name ||
-    place.nombre ||
-    "Lugar";
-
-  marker.bindPopup(
-    `<strong>${escapeHtml(placeName)}</strong>`
-  );
-
-  marker.addTo(group);
-});
-
-    // Comprueba si existe una ruta válida.
+// Comprueba si existe una ruta válida.
     const hasRoute =
       Array.isArray(routeResult?.segments) &&
       routeResult.segments.length > 0 &&
@@ -808,8 +778,39 @@ places.forEach((place) => {
           segment?.geometry?.type === "LineString" &&
           Array.isArray(segment?.geometry?.coordinates) &&
           segment.geometry.coordinates.length >= 2
-);
-      
+    );
+// Solo mostramos lugares normales si NO hay ruta
+  if (!hasRoute) {
+    places.forEach((place) => {
+      const lat = Number(place.lat);
+      const lng = Number(place.lon);
+
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng)
+      ) {
+        console.warn(
+          "Lugar con coordenadas inválidas:",
+          place
+        );
+        return;
+      }
+
+      const marker = L.marker([lat, lng]);
+
+      const placeName =
+        place.name ||
+        place.nombre ||
+        "Lugar";
+
+      marker.bindPopup(
+        `<strong>${escapeHtml(placeName)}</strong>`
+      );
+
+      marker.addTo(group);
+    });
+  }
+
     console.log("routeResult", routeResult);
 
     if (routeResult?.segments) {
@@ -1059,10 +1060,12 @@ places.forEach((place) => {
   // CONTENEDOR DEL MAPA
   // =========================================================
 
+  // Marcador "C" se traducia a "do", asi ya no hay problemas
   return (
     <div
       ref={containerRef}
       className="w-full h-full min-h-[400px] rounded-lg"
+      translate="no" 
     />
   );
 };
