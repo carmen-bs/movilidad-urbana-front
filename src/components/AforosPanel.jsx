@@ -35,8 +35,8 @@ const getNivelClass = (nivel) => {
 const ALL_CITIES = [
   { value: "alicante", label: "Alicante" },
   { value: "valencia", label: "Valencia" },
-  { value: "elche", label: "Elche" },
-  { value: "peniscola", label: "Peñíscola" },
+  { value: "javea", label: "Jávea" },
+  { value: "torrevieja", label: "Torrevieja" },
 ];
 
 // Estados de los filtros seleccionados (ciudad, fecha, hora) y el botón para aplicar los filtros y mostrar el mapa con los datos correspondientes

@@ -4,41 +4,23 @@ import { LogOut } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import logo from "@/assets/logo-mobility.png";
-import { useState, useEffect } from "react";
-import { useApi } from "@/hooks/useApi";
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getAuthUser();
-  const { fetchApi } = useApi();
 
-  const [serviceType, setServiceType] = useState([]);
-
-  useEffect(() => {
-    async function loadAccess() {
-      try {
-        const data = await fetchApi("/me/access", {}, true);
-        setServiceType(data.serviceType || []);
-      } catch (error) {
-        console.error("Error cargando serviceType:", error);
-        setServiceType([]);
-      }
-    }
-
-    loadAccess();
-  }, [fetchApi]);
 
   const NAV_ITEMS = [
-    serviceType.includes("itinerarios") && {
+    {
       label: "Gestión de itinerarios",
       path: "/mapa",
     },
-    serviceType.includes("aforos") && {
+    {
       label: "Gestión de aforos",
       path: "/zonas",
     },
-  ].filter(Boolean);
+  ];
 
   const handleLogout = async () => {
     try {
