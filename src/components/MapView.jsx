@@ -91,11 +91,7 @@ function escapeHtml(value = "") {
 }
 
 
-/**
- * Formatea una hora:
- *
- * "07:30:00" → "7:30"
- */
+// Formatea una hora: "07:30:00" → "7:30"
 function formatHour(hour) {
   if (!hour) {
     return "--";
@@ -108,10 +104,7 @@ function formatHour(hour) {
 }
 
 
-/**
- * Convierte una hora "HH:mm:ss"
- * a minutos totales.
- */
+//Convierte una hora "HH:mm:ss" a minutos totales.
 function timeToMinutes(hour) {
   if (!hour) {
     return 0;
@@ -127,10 +120,7 @@ function timeToMinutes(hour) {
 }
 
 
-/**
- * Convierte minutos totales
- * a formato "H:mm".
- */
+// Convierte minutos totales a formato "H:mm".
 function minutesToHour(minutes) {
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
@@ -143,10 +133,7 @@ function minutesToHour(minutes) {
 }
 
 
-/**
- * Une rangos horarios que se solapan
- * o son consecutivos.
- */
+//Une rangos horarios que se solapan o son consecutivos.
 function mergeRanges(ranges) {
   if (!Array.isArray(ranges) || ranges.length === 0) {
     return [];
@@ -225,11 +212,8 @@ function mergeRanges(ranges) {
 
 
 /**
- * Convierte la fecha seleccionada
- * en una fecha local.
- *
- * Evita problemas de zona horaria al trabajar
- * con valores como "2026-07-22".
+ * Convierte la fecha seleccionada en una fecha local.
+ * Evita problemas de zona horaria al trabajar con valores como "2026-07-22".
  */
 function parseLocalDate(value) {
   if (!value) {
@@ -260,9 +244,7 @@ function parseLocalDate(value) {
 
 /**
  * Devuelve una fecha en formato MM-DD.
- *
- * Ejemplo:
- * 24 de junio → "06-24"
+ * Ejemplo: 24 de junio → "06-24"
  */
 function getMonthDay(date) {
   const month = String(
@@ -279,8 +261,7 @@ function getMonthDay(date) {
 
 /**
  * Normaliza fechas de temporada y cierres.
- *
- * Permite:
+ *Permite:
  * - "06-24"
  * - "24/06"
  */
@@ -312,12 +293,9 @@ function normalizeMonthDay(value) {
 
 
 /**
- * Comprueba si una fecha pertenece
- * a una temporada anual.
+ * Comprueba si una fecha pertenece a una temporada anual.
  *
- * También permite temporadas que cruzan
- * el cambio de año:
- *
+ * También permite temporadas que cruzan el cambio de año:
  * 11-15 → 02-27
  */
 function isDateInRange(
@@ -355,9 +333,7 @@ function isDateInRange(
 
 
 /**
- * Comprueba si el día de la semana
- * está incluido en el campo dow.
- *
+ * Comprueba si el día de la semana está incluido en el campo dow.
  * 0 = lunes
  * 6 = domingo
  */
@@ -380,10 +356,7 @@ function isDowValid(dow, currentDow) {
 }
 
 
-/**
- * Genera el HTML del horario que se muestra
- * dentro del popup del lugar.
- */
+//Genera el HTML del horario que se muestra dentro del popup del lugar.
 function formatTodayPlaceHours(
   hours,
   selectedDate
@@ -398,10 +371,7 @@ function formatTodayPlaceHours(
   const dateToUse =
     parseLocalDate(selectedDate);
 
-  // JavaScript:
-  // domingo = 0
-  //
-  // Nuestro sistema:
+  
   // lunes = 0
   const currentDow =
     (dateToUse.getDay() + 6) % 7;
@@ -414,8 +384,7 @@ function formatTodayPlaceHours(
     : "Hoy";
 
 
-  // Filtra los horarios correspondientes
-  // a la temporada seleccionada.
+  // Filtra los horarios correspondientes a la temporada seleccionada.
   const seasonalHours = hours.filter(
     (hour) =>
       isDateInRange(
@@ -463,8 +432,7 @@ function formatTodayPlaceHours(
   }
 
 
-  // Detecta lugares de acceso libre,
-  // sin hora de apertura ni cierre.
+  // Detecta lugares de acceso libre, sin hora de apertura ni cierre.
   const hasFreeAccess = todayHours.some(
     (hour) =>
       !hour.open_time &&
@@ -664,8 +632,7 @@ const MapView = ({
     mapRef.current = map;
 
 
-    // Fuerza el ajuste del tamaño cuando el mapa
-    // se muestra dentro del diseño flex.
+    // Fuerza el ajuste del tamaño cuando el mapa se muestra dentro del diseño flex.
     window.setTimeout(() => {
       map.invalidateSize();
     }, 100);
@@ -785,49 +752,75 @@ const MapView = ({
       const lat = Number(place.lat);
       const lng = Number(place.lon);
 
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng)
-      ) {
-        console.warn(
-          "Lugar con coordenadas inválidas:",
-          place
-        );
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        console.warn("Lugar con coordenadas inválidas:", place);
         return;
       }
 
       const marker = L.marker([lat, lng]);
 
-      const placeName =
-        place.name ||
-        place.nombre ||
-        "Lugar";
+      const placeName = place.name || place.nombre || "Lugar";
+      const description = place.description || place.descripcion || "";
 
-      marker.bindPopup(
-        `<strong>${escapeHtml(placeName)}</strong>`
-      );
+      // Popup inicial mientras se cargan los horarios
+      marker.bindPopup(`
+        <div>
+          <strong>${escapeHtml(placeName)}</strong>
+          ${description ? `<br/><br/>${escapeHtml(description)}` : ""}
+          <br/><br/>
+          <strong>Horarios:</strong>
+          <div>Cargando...</div>
+        </div>
+      `);
 
       marker.addTo(group);
+
+      // Cargar horarios del lugar
+      (async () => {
+        try {
+          const hours = await onLoadPlaceHours?.(place.place_id);
+
+          const hoursHtml = formatTodayPlaceHours(
+            hours,
+            selectedDate
+          );
+
+          marker.setPopupContent(`
+            <div>
+              <strong>${escapeHtml(placeName)}</strong>
+              ${description ? `<br/><br/>${escapeHtml(description)}` : ""}
+              <br/><br/>
+              <strong>Horarios:</strong>
+              <div>${hoursHtml}</div>
+            </div>
+          `);
+        } catch (error) {
+          console.error(
+            "Error cargando horarios:",
+            place.place_id,
+            error
+          );
+
+          marker.setPopupContent(`
+            <div>
+              <strong>${escapeHtml(placeName)}</strong>
+              ${description ? `<br/><br/>${escapeHtml(description)}` : ""}
+              <br/><br/>
+              <strong>Horarios:</strong>
+              <div>Cerrado</div>
+            </div>
+          `);
+        }
+      })();
     });
   }
 
-    console.log("routeResult", routeResult);
-
-    if (routeResult?.segments) {
-      console.log(
-        routeResult.segments.map((s) => ({
-          mode: s.mode,
-          coords: s.geometry?.coordinates?.length,
-        }))
-      );
-    }
 
     // =======================================================
     // LUGARES DE LA CIUDAD
     // =======================================================
 
-    // Los lugares se muestran cuando todavía
-    // no hay una ruta calculada.
+    // Los lugares se muestran cuando todavía no hay una ruta calculada.
     if (hasRoute) {
       console.log("========== DIBUJANDO RUTA ==========");
       console.log("routeResult:", routeResult);
