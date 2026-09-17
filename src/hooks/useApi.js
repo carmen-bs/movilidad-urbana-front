@@ -23,7 +23,7 @@ export const useApi = () => {
       ...options,
       headers,
     });
-
+    
     if (!res.ok) {
       throw new Error(`Error API: ${res.status}`);
     }

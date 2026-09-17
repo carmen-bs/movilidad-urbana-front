@@ -17,7 +17,7 @@ const Header = () => {
       path: "/mapa",
     },
     {
-      label: "55Gestión de aforos",
+      label: "Gestión de aforos",
       path: "/zonas",
     },
   ];
