@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-// import { useApi } from "@/hooks/useApi";
 import fondoCiudad from "@/assets/fondo1-mobility.png";
 import logo from "@/assets/logo-mobility.png";
 import tituloMovilidad from "@/assets/titulo-mobility.png";
@@ -11,36 +10,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
- // const { fetchApi } = useApi();
-
- // Función para manejar el inicio de sesión con Firebase, con acceso o no de los usuarios.
-  /*const handleFirebaseLogin = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken(true);
-
-      localStorage.setItem("firebaseToken", token);
-      localStorage.setItem("user", result.user.email || result.user.uid);
-
-      const data = await fetchApi("/me/access", {}, true);
-
-      if (data.serviceType?.includes("itinerarios")) {
-        navigate("/mapa");
-      } else if (data.serviceType?.includes("aforos")) {
-        navigate("/zonas");
-      } else {
-        navigate("/no-access");
-      }
-    } catch (err) {
-      setError("Error en login: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };*/
 
   // Funcion inicio de sesion, sin limataciones de acceso a usuarios 
   const handleFirebaseLogin = async () => {
