@@ -1,7 +1,6 @@
 import { MapPin, CalendarDays, Clock, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import AforosMap from "@/components/AforosMap";
-import { useApi } from "@/hooks/useApi";
 
 // Datos ficticios para las tablas
 const aforosTiempoReal = [
@@ -41,8 +40,7 @@ const ALL_CITIES = [
 
 // Estados de los filtros seleccionados (ciudad, fecha, hora) y el botón para aplicar los filtros y mostrar el mapa con los datos correspondientes
 const AforosPanel = () => {
-  const { fetchApi } = useApi();
-  const [availableCities, setAvailableCities] = useState([]);
+  const [availableCities] = useState(ALL_CITIES);
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
@@ -53,30 +51,6 @@ const AforosPanel = () => {
     date: "",
     hour: "",
   });
-
-  useEffect(() => {
-  const loadAccess = async () => {
-    try {
-      const access = await fetchApi("/me/access", {}, true);
-      const allowedDistritos = access.allowedDistritos || [];
-
-      if (allowedDistritos.includes("*")) {
-        setAvailableCities(ALL_CITIES);
-      } else {
-        setAvailableCities(
-          ALL_CITIES.filter((city) =>
-            allowedDistritos.includes(city.value)
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error cargando ciudades de aforos:", error);
-      setAvailableCities([]);
-    }
-  };
-
-  loadAccess();
-}, [fetchApi]);
 
   // boton "ver aforos"
   const handleViewAforos = () => {
