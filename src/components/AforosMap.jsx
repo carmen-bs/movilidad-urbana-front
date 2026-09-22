@@ -4,6 +4,66 @@ import "leaflet/dist/leaflet.css";
 
 //datos fake 
 const USE_FAKE_AFOROS = true;
+const mockAforos = {
+  //Alicante
+  "0301401": 12000, // Centro / costa Alicante → máximo
+  "0301402": 7600,  // zona urbana cercana
+  "0301403": 12000, // zona urbana media
+  "0301404": 2600,  // alrededores ciudad
+  "0301405": 1700,  // interior medio
+  "0301406":1000,   // interior bajo-medio
+  "0301407": 2400,  // periferia baja
+  "0301408": 220,   // zona menos concurrida
+
+  // Valencia
+  "4625001": 15000, // zona urbana máxima
+  "4625002": 9500,  // zona urbana media
+  "4625003": 7000,  // zona urbana baja
+  "4625004": 4200,  // alrededores ciudad
+  "4625005": 2800,  // interior medio
+  "4625006": 11000, // centro ciudad
+  "4625007": 6500, 
+  "4625008": 3500,
+  "4625009": 1800,
+  "4625010": 5200,  // centro costa
+  "4625011": 8000, // puerto
+  "4625012": 3000,
+  "4625013": 2200,
+  "4625014": 13000,
+  "4625015": 4800,
+  "4625016": 9000,
+  "4625017": 3600,
+  "4625018": 6000,
+  "4625019": 1600, // parque l'albufera
+
+  // Jávea
+  "0308201": 12000, //centro
+  "0308202": 6500,  // zona urbana
+  "0308203": 2800,  // alrededores
+
+  // Torrevieja
+  "0313301": 11000, // centro
+  "0313302": 3200,  // laguna
+  "0313303": 7000,  // costa
+};
+
+// Convertimos nº de personas → color
+const getColor = (personas) => {
+  if (personas > 10000) return "#7f0000";
+  if (personas > 5000) return "#bd0026";
+  if (personas > 2000) return "#f03b20";
+  if (personas > 1000) return "#fd8d3c";
+  if (personas > 500) return "#feb24c";
+  if (personas > 200) return "#fed976";
+  return "#ffffcc";
+};
+
+const AforosMap = ({ city, date, hour }) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const geoJsonLayerRef = useRef(null);
+  const alertMarkersRef = useRef(null);
+  const [error, setError] = useState(null);
 
   // 1. Crear mapa 
   useEffect(() => {
