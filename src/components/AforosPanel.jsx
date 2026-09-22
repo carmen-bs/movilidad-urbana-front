@@ -5,14 +5,14 @@ import AforosMap from "@/components/AforosMap";
 // Datos ficticios para las tablas
 const aforosTiempoReal = [
   { distrito: "Centro", nivel: "Alto", hora: "15:00" },
-  { distrito: "Playa", nivel: "Muy Alto", hora: "15:00" },
-  { distrito: "Montaña", nivel: "Medio", hora: "15:00" },
+  { distrito: "Costa", nivel: "Muy Alto", hora: "15:00" },
+  { distrito: "Interior", nivel: "Medio", hora: "15:00" },
 ];
 
 const aforosPrediccion = [
   { distrito: "Centro", nivel: "Muy Alto", hora: "17:00" },
-  { distrito: "Playa", nivel: "Alto", hora: "17:00" },
-  { distrito: "Montaña", nivel: "Medio", hora: "17:00" },
+  { distrito: "Costa", nivel: "Alto", hora: "17:00" },
+  { distrito: "Interior", nivel: "Medio", hora: "17:00" },
 ];
 
 // Función para los colores de los niveles de volumen de personas
