@@ -1,51 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-//datos fake 
-const USE_FAKE_AFOROS = true;
-const mockAforos = {
-  //Alicante
-  "0301401": 12000, // Centro / costa Alicante → máximo
-  "0301402": 7600,  // zona urbana cercana
-  "0301403": 12000, // zona urbana media
-  "0301404": 2600,  // alrededores ciudad
-  "0301405": 1700,  // interior medio
-  "0301406":1000,   // interior bajo-medio
-  "0301407": 2400,  // periferia baja
-  "0301408": 220,   // zona menos concurrida
-
-  // Valencia
-  "4625001": 15000, // zona urbana máxima
-  "4625002": 9500,  // zona urbana media
-  "4625003": 7000,  // zona urbana baja
-  "4625004": 4200,  // alrededores ciudad
-  "4625005": 2800,  // interior medio
-  "4625006": 11000, // centro ciudad
-  "4625007": 6500, 
-  "4625008": 3500,
-  "4625009": 1800,
-  "4625010": 5200,  // centro costa
-  "4625011": 8000, // puerto
-  "4625012": 3000,
-  "4625013": 2200,
-  "4625014": 13000,
-  "4625015": 4800,
-  "4625016": 9000,
-  "4625017": 3600,
-  "4625018": 6000,
-  "4625019": 1600, // parque l'albufera
-
-  // Jávea
-  "0308201": 12000, //centro
-  "0308202": 6500,  // zona urbana
-  "0308203": 2800,  // alrededores
-
-  // Torrevieja
-  "0313301": 11000, // centro
-  "0313302": 3200,  // laguna
-  "0313303": 7000,  // costa
-};
+import { useApi } from "@/hooks/useApi";
 
 // Convertimos nº de personas → color
 const getColor = (personas) => {
@@ -64,6 +20,7 @@ const AforosMap = ({ city, date, hour }) => {
   const geoJsonLayerRef = useRef(null);
   const alertMarkersRef = useRef(null);
   const [error, setError] = useState(null);
+  const { fetchApi } = useApi();
 
   // 1. Crear mapa 
   useEffect(() => {
@@ -95,7 +52,9 @@ const AforosMap = ({ city, date, hour }) => {
       };
       
       const ciudadNormalizada =
-        city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+        city.toLowerCase() === "javea"
+          ? "Jávea"
+          : city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
 
       const archivo = archivosGeoJSON[ciudadNormalizada];
 
@@ -115,6 +74,20 @@ const AforosMap = ({ city, date, hour }) => {
 
         setError(null);
 
+        const aforos = await fetchApi(
+          `/aforos?city=${encodeURIComponent(ciudadNormalizada)}&date=${date}&hour=${encodeURIComponent(hour)}`,
+          {},
+          true
+        );
+
+        const aforosPorDistrito = Object.fromEntries(
+          aforos.map((aforo) => [aforo.distrito, aforo.personas])
+        );
+
+        console.log("Aforos recibidos:", aforos);
+        console.log("Aforos por distrito:", aforosPorDistrito);
+        console.log("AFOROS API:", aforos);
+
         // Elimina la capa anterior
         if (geoJsonLayerRef.current) {
           geoJsonLayerRef.current.remove();
@@ -132,15 +105,7 @@ const AforosMap = ({ city, date, hour }) => {
             const distrito = feature.properties.DISTRITO;
 
             const id = `${ineMun}${String(distrito).padStart(2, "0")}`;
-              console.log("Distrito:", {
-                ineMun,
-                distrito,
-                id,
-                personas: mockAforos[id] || 0,
-              });
-              const personas = USE_FAKE_AFOROS
-              ? mockAforos[id] || 0
-              : feature.properties.personas_estimadas || 0;
+              const personas = aforosPorDistrito[id] || 0;
 
             return {
               fillColor: getColor(personas),
@@ -156,9 +121,7 @@ const AforosMap = ({ city, date, hour }) => {
 
             const id = `${ineMun}${String(distrito).padStart(2, "0")}`;
 
-            const personas = USE_FAKE_AFOROS
-              ? mockAforos[id] || 0
-              : feature.properties.personas_estimadas || 0;
+            const personas = aforosPorDistrito[id] || 0;
 
             layer.bindPopup(`
               <strong>Distrito ${distrito}</strong><br/>
