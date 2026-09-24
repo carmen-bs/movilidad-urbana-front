@@ -327,8 +327,7 @@ const HomePage = () => {
         </h2>
 
         <p className="text-sm text-muted-foreground mt-1">
-          Utiliza tu ubicación actual y calcula una ruta
-          hasta uno o varios lugares disponibles.
+          Selecciona los lugares que quieres visitar y genera diferentes itinerarios adaptados a tus preferencias
         </p>
       </div>
 
