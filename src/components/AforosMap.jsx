@@ -14,6 +14,13 @@ const getColor = (personas) => {
   return "#ffffcc";
 };
 
+const CITY_VIEWS = {
+  alicante: {
+    center: [38.3452, -0.481],
+    zoom: 11,
+  },
+};
+
 const AforosMap = ({ city, date, hour }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -26,7 +33,7 @@ const AforosMap = ({ city, date, hour }) => {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // cenralizamos en españa
+    // centralizamos en españa
     mapInstanceRef.current = L.map(mapRef.current).setView([40.4168, -3.7038], 5);
 
     // fonfo (openStreetMap )
@@ -145,15 +152,21 @@ const AforosMap = ({ city, date, hour }) => {
           },
         }).addTo(mapInstanceRef.current);
 
-        // Ajusta el zoom a los distritos cargados
-        const bounds = geoJsonLayerRef.current.getBounds();
+       // Ajusta el zoom a los distritos cargados
+          const bounds = geoJsonLayerRef.current.getBounds();
 
-        if (bounds.isValid()) {
-          mapInstanceRef.current.fitBounds(bounds, {
-            padding: [20, 20],
-          });
-        }
-      } catch (err) {
+          if (bounds.isValid()) {
+            const vista = CITY_VIEWS[ciudadNormalizada.toLowerCase()];
+
+            if (vista) {
+              mapInstanceRef.current.setView(vista.center, vista.zoom);
+            } else {
+              mapInstanceRef.current.fitBounds(bounds, {
+                padding: [20, 20],
+              });
+            }
+          }
+        } catch (err) {
         setError(err.message);
       }
     };
