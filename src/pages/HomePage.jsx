@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getAuthUser, loadJSON } from "@/utils/storage";
+import { getAuthUser } from "@/utils/storage";
 import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import RoutesPanel from "@/components/RoutesPanel";
@@ -41,13 +41,6 @@ const HomePage = () => {
   // Información del punto libre seleccionado en el mapa.
   const [selectedPoint, setSelectedPoint] = useState(null);
 
-  // Zonas guardadas o dibujadas.
-  // Las mantenemos para no perder esta funcionalidad del proyecto.
-  const [zones, setZones] = useState([]);
-  const [isDrawingZone] = useState(false);
-  const [tempZone] = useState([]);
-
-
   // Carga los lugares desde el backend al abrir la página.
   useEffect(() => {
     const loadPlaces = async () => {
@@ -80,35 +73,6 @@ const HomePage = () => {
 
     loadPlaces();
   }, [fetchApi]);
-
-
-  // =========================================================
-  // RECUPERAR ZONA SELECCIONADA
-  // =========================================================
-
-  // Mantiene la compatibilidad con las zonas guardadas anteriormente en localStorage.
-  useEffect(() => {
-    const selectedZoneKey =
-      `selectedZone:${authUser}`;
-
-    const selectedZone = loadJSON(
-      selectedZoneKey,
-      null
-    );
-
-    if (selectedZone?.points) {
-      setZones([
-        {
-          points: selectedZone.points,
-        },
-      ]);
-
-      localStorage.removeItem(
-        selectedZoneKey
-      );
-    }
-  }, [authUser]);
-
 
   // =========================================================
   // INFORMACIÓN DE UN PUNTO DEL MAPA
@@ -205,16 +169,12 @@ const HomePage = () => {
    */
   const handleMapClick = useCallback(
     async (lat, lng) => {
-      if (isDrawingZone) {
-        return;
-      }
-
       const pointInfo =
         await getPointInfo(lat, lng);
 
       setSelectedPoint(pointInfo);
     },
-    [isDrawingZone]
+    []
   );
 
 
@@ -368,12 +328,8 @@ const HomePage = () => {
             places={selectedPlaces}
             routeResult={routeResult}
             routeMode={routeMode}
-            zones={zones}
-            tempZone={tempZone}
-            isDrawingZone={isDrawingZone}
             onMapClick={handleMapClick}
             onLoadPlaceHours={getPlaceHours}
-            itineraryStops={[]}
             selectedCity={selectedCity}
             selectedDate={selectedRouteDate}
           />

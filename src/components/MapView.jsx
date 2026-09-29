@@ -547,9 +547,6 @@ const MapView = ({
   places = [],
   routeResult,
   routeMode = "drive",
-  zones = [],
-  tempZone = [],
-  isDrawingZone = false,
   onMapClick,
   onLoadPlaceHours,
   selectedCity,
@@ -562,7 +559,7 @@ const MapView = ({
   const containerRef = useRef(null);
 
   // Grupo donde se dibujan los elementos dinámicos:
-  // lugares, ruta, marcadores y zonas.
+  // lugares, rutas y marcadores.
   const layersRef = useRef(
     L.layerGroup()
   );
@@ -983,67 +980,11 @@ const MapView = ({
       console.log("========== FIN RUTA ==========");
     }
 
-
-    // =======================================================
-    // ZONAS GUARDADAS
-    // =======================================================
-
-    zones.forEach((zone) => {
-      if (
-        !Array.isArray(zone?.points) ||
-        zone.points.length < 3
-      ) {
-        return;
-      }
-
-      L.polygon(
-        zone.points.map(
-          (point) => [
-            point.lat,
-            point.lng,
-          ]
-        ),
-        {
-          color: "#0B1B3A",
-          fillColor: "#06B6D4",
-          fillOpacity: 0.2,
-          weight: 2,
-        }
-      ).addTo(group);
-    });
-
-
-    // =======================================================
-    // ZONA TEMPORAL
-    // =======================================================
-
-    if (
-      isDrawingZone &&
-      tempZone.length > 0
-    ) {
-      L.polygon(
-        tempZone.map(
-          (point) => [
-            point.lat,
-            point.lng,
-          ]
-        ),
-        {
-          color: "#06B6D4",
-          fillColor: "#06B6D4",
-          fillOpacity: 0.1,
-          weight: 2,
-          dashArray: "6 4",
-        }
-      ).addTo(group);
-    }
+  
   }, [
     places,
     routeResult,
     routeMode,
-    zones,
-    tempZone,
-    isDrawingZone,
     onLoadPlaceHours,
     selectedDate,
   ]);

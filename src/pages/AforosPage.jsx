@@ -14,28 +14,17 @@ const AforosPage = () => {
     if (!isAuthenticated()) navigate("/login");
   }, [navigate]);
 
-  // Estado que contiene las zonas guardadas
-  const [zones, setZones] = useState(() => loadJSON(key, []));
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
 
-  // guarda zonas cuando cambian
-  useEffect(() => saveJSON(key, zones), [zones, key]);
+      <div className="flex-1 px-6 py-5 w-full max-w-[1500px] mx-auto">
 
-  // Guarda una zona seleccionada y navega al mapa
-  const viewOnMap = (zone) => {
-    saveJSON(`selectedZone:${authUser}`, zone);
-    navigate("/mapa");
-  };
-return (
-  <div className="min-h-screen flex flex-col bg-background">
-    <Header />
+        <AforosPanel />
+      </div>
 
-    <div className="flex-1 px-6 py-5 w-full max-w-[1500px] mx-auto">
-
-      <AforosPanel />
     </div>
-
-  </div>
-);
+  );
 };
 
 export default AforosPage;
