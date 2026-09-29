@@ -235,8 +235,6 @@ const formatDuration = (minutes = 0) => {
         },
         true
       );
-
-      console.log("Respuesta API:", data);
       
       const generatedItineraries =
         Array.isArray(data?.itineraries)
@@ -279,9 +277,6 @@ const formatDuration = (minutes = 0) => {
  */
 const handleSelectItinerary = (itinerary) => {
   try {
-    console.log("========== ITINERARIO SELECCIONADO ==========");
-    console.log("ITINERARIO:", itinerary);
-
     if (!itinerary) {
       setError("No se ha seleccionado el itinerario.");
       return;
@@ -302,11 +297,6 @@ const handleSelectItinerary = (itinerary) => {
         )
       )
       .filter(Boolean);
-
-    console.log(
-      "LUGARES DEL ITINERARIO:",
-      orderedPlaces.map((place) => place.name)
-    );
 
     if (orderedPlaces.length < 2) {
       setError(
@@ -351,15 +341,6 @@ const handleSelectItinerary = (itinerary) => {
   ? [...itinerary.routes]
   : [];
 
-  console.log(
-  "========== RUTAS RECIBIDAS DEL BACKEND =========="
-  );
-
-  console.log(
-  "RUTAS RECIBIDAS:",
-  itineraryRoutes
-  );
-
   /**
   * Ordenamos primero por route_order.
   */
@@ -369,23 +350,6 @@ const handleSelectItinerary = (itinerary) => {
     Number(b.route_order ?? 0)
     );
 
-  console.log(
-  "========== RUTAS ORDENADAS =========="
-  );
-
-  itineraryRoutes.forEach((route, index) => {
-  console.log(`RUTA ${index}:`, {
-  route_order: route.route_order,
-  from: route.previous_place_id,
-  to: route.place_id,
-  mode: route.transport_mode,
-  hasGeometry: Boolean(
-  route.route_geometry?.coordinates?.length >= 2
-  ),
-  coordinates:
-  route.route_geometry?.coordinates?.length,
-  });
-  });
 
   /**
   * 4. BUSCAR EXACTAMENTE LOS TRAMOS QUE CORRESPONDEN
@@ -400,16 +364,6 @@ const handleSelectItinerary = (itinerary) => {
   */
 
   const expectedSegments = orderedPlaces.length - 1;
-
-  console.log(
-  "========== VALIDANDO CONEXIONES =========="
-  );
-
-  console.log(
-  "TRAMOS ESPERADOS:",
-  expectedSegments
-  );
-
   const validRoutes = [];
 
   for (let index = 0; index < expectedSegments; index++) {
@@ -421,20 +375,6 @@ const handleSelectItinerary = (itinerary) => {
 
   const toId =
   toPlace.place_id ?? toPlace.id;
-
-  console.log(
-  `Buscando tramo ${index}:`,
-  {
-  from: {
-  id: fromId,
-  name: fromPlace.name,
-  },
-  to: {
-  id: toId,
-  name: toPlace.name,
-  },
-  }
-  );
 
   const matchingRoute = itineraryRoutes.find(
   (route) => {
@@ -467,23 +407,6 @@ const handleSelectItinerary = (itinerary) => {
   );
 
   if (matchingRoute) {
-  console.log(
-  `✓ TRAMO ENCONTRADO ${index}:`,
-  {
-  route_order:
-  matchingRoute.route_order,
-  from:
-  matchingRoute.previous_place_id,
-  to:
-  matchingRoute.place_id,
-  mode:
-  matchingRoute.transport_mode,
-  coordinates:
-  matchingRoute.route_geometry
-  ?.coordinates?.length,
-  }
-  );
-
   validRoutes.push(matchingRoute);
   } else {
   console.error("✗ NO SE ENCONTRÓ EL TRAMO ${index}",
@@ -500,25 +423,6 @@ const handleSelectItinerary = (itinerary) => {
   );
   }
   }
-
-  console.log(
-  "========== RESULTADO VALIDACIÓN =========="
-  );
-
-  console.log(
-  "TRAMOS ESPERADOS:",
-  expectedSegments
-  );
-
-  console.log(
-  "TRAMOS VÁLIDOS ENCONTRADOS:",
-  validRoutes.length
-  );
-
-  console.log(
-  "RUTAS VÁLIDAS PARA PINTAR:",
-  validRoutes
-  );
 
   /**
   * Si no encontramos todos los tramos,
@@ -576,26 +480,6 @@ const handleSelectItinerary = (itinerary) => {
       place_name: route.place_name,
       previous_place_id: route.previous_place_id,
     }));
-
-    console.log(
-      "SEGMENTOS FINALES:",
-      segments
-    );
-
-    segments.forEach((segment, index) => {
-      console.log(
-        `SEGMENTO ${index}:`,
-        {
-          route_order: segment.route_order,
-          from: segment.previous_place_id,
-          to: segment.place_id,
-          place: segment.place_name,
-          mode: segment.mode,
-          coordinates:
-            segment.geometry?.coordinates?.length,
-        }
-      );
-    });
 
     /**
      * 6. COORDENADAS PARA MAPVIEW
@@ -677,34 +561,7 @@ const handleSelectItinerary = (itinerary) => {
     setError("");
 
     /**
-     * 10. DEBUG FINAL
-     */
-    console.log(
-      "========== RESULTADO FINAL RUTA =========="
-    );
-
-    console.log(
-      JSON.stringify(result, null, 2)
-    );
-
-    result.segments.forEach(
-      (segment, index) => {
-        console.log(
-          "SEGMENTO",
-          index,
-          {
-            mode: segment.mode,
-            geometryType:
-              segment.geometry?.type,
-            coordinates:
-              segment.geometry?.coordinates?.length,
-          }
-        );
-      }
-    );
-
-    /**
-     * 11. PASAR RESULTADO A MAPVIEW
+     * 10. PASAR RESULTADO A MAPVIEW
      */
     onRouteCalculated?.(
       result,
