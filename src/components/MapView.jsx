@@ -819,25 +819,13 @@ const MapView = ({
 
     // Los lugares se muestran cuando todavía no hay una ruta calculada.
     if (hasRoute) {
-      console.log("========== DIBUJANDO RUTA ==========");
-      console.log("routeResult:", routeResult);
-
       const routeLayers = [];
 
       routeResult.segments.forEach((segment, index) => {
-        console.log(`SEGMENTO ${index}`, segment);
-
         if (!segment?.geometry) {
           console.warn("Segmento sin geometry");
           return;
         }
-
-        console.log("Tipo:", segment.geometry.type);
-        console.log(
-          "Nº coordenadas:",
-          segment.geometry.coordinates?.length
-        );
-
         const style =
           routeStyles[segment.mode] ||
           routeStyles[routeMode] ||
@@ -849,32 +837,14 @@ const MapView = ({
           );
 
           const layer = L.polyline(latLngs, style);
-
-          console.log(
-            "Bounds del segmento:",
-            layer.getBounds().toBBoxString()
-          );
-
           layer.addTo(group);
           routeLayers.push(layer);
-
-          console.log(
-            `Segmento ${index} añadido correctamente al mapa`
-          );
         } catch (e) {
-          console.error(
-            "ERROR creando segmento",
-            e,
-            segment
-          );
+          console.error("ERROR creando segmento", e, segment);
         }
       });
 
-      console.log(
-        "Número de layers creados:",
-        routeLayers.length
-      );
-
+      
       // ===================================================
       // MARCADORES
       // ===================================================
@@ -910,24 +880,15 @@ const MapView = ({
         ),
       ];
 
-      console.log("Puntos:", routePoints);
-
       routePoints.forEach((point, index) => {
         if (!point.coord) return;
 
         const lat = Number(point.coord.lat);
         const lng = Number(point.coord.lng);
 
-        console.log(
-          `Marcador ${index}`,
-          lat,
-          lng
-        );
-
         if (
-          !Number.isFinite(lat) ||
-          !Number.isFinite(lng)
-        ) {
+          !Number.isFinite(lat) || !Number.isFinite(lng)) 
+          {
           console.warn(
             "Coordenadas inválidas"
           );
@@ -952,20 +913,11 @@ const MapView = ({
       });
 
       if (routeLayers.length > 0) {
-        const featureGroup =
-          L.featureGroup(routeLayers);
+        const featureGroup = L.featureGroup(routeLayers);
 
-        const bounds =
-          featureGroup.getBounds();
-
-        console.log(
-          "Bounds finales:",
-          bounds.toBBoxString()
-        );
-
+        const bounds = featureGroup.getBounds();
+       
         if (bounds.isValid()) {
-          console.log("Haciendo fitBounds");
-
           map.fitBounds(bounds, {
             padding: [60, 60],
             maxZoom: 16,
@@ -976,8 +928,6 @@ const MapView = ({
           );
         }
       }
-
-      console.log("========== FIN RUTA ==========");
     }
 
   
