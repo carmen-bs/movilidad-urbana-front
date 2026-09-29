@@ -20,9 +20,6 @@ export function getAuthUser() {
   return localStorage.getItem("user") || "";
 }
 
-export function login(username) {
-  localStorage.setItem("user", username);
-}
 
 export function logout() {
   localStorage.removeItem("user");
