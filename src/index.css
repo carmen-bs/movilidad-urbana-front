@@ -37,16 +37,7 @@
     --ring: 146 49% 36%;
 
     --radius: 1rem;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 200 10% 20%;
-    --sidebar-primary: 146 49% 36%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 202 74% 39%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 140 10% 87%;
-    --sidebar-ring: 146 49% 36%;
-
+    
     --hero-gradient: linear-gradient(135deg, hsl(146 49% 36%) 0%, hsl(146 49% 36% / 0.7) 50%, transparent 100%);
     --shadow-card: 0 4px 24px -4px hsl(146 49% 36% / 0.08);
     --shadow-elevated: 0 8px 32px -8px hsl(146 49% 36% / 0.12);
