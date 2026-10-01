@@ -8,7 +8,6 @@ import { useAuth } from "@/context/AuthContext";
 const DEFAULT_PROFILE = {
   name: "",
   email: "",
-  username: "",
   avatar: "",
 };
 
@@ -30,7 +29,6 @@ const ProfilePage = () => {
       ...saved,
       name: saved.name || user?.displayName || user?.email?.split("@")[0] || "",      
       email: saved.email || user?.email || "",
-      username: saved.username || user?.email || user?.uid || authUser,
       avatar: saved.avatar || user?.photoURL || "",    
     };
   });
@@ -51,7 +49,6 @@ const ProfilePage = () => {
       ...prev,
       name: currentName || fallbackName,
       email: prev.email || user.email || "",
-      username: prev.username || user.email || user.uid || "",
       avatar: prev.avatar || user.photoURL || "",
     };
   });

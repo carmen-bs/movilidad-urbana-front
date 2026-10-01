@@ -30,3 +30,4 @@ dist-ssr
 firebase.js
 .env.*
 .firebase*
+.firebase/

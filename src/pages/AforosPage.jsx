@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import {useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, getAuthUser, loadJSON, saveJSON } from "@/utils/storage";
+import { isAuthenticated } from "@/utils/storage";
 import Header from "@/components/Header";
 import AforosPanel from "@/components/AforosPanel";
 
 const AforosPage = () => {
   const navigate = useNavigate();
-  const authUser = getAuthUser();
-  const key = `zonas:${authUser}`;
 
   // usuario no está autenticado --> redirige a login
   useEffect(() => {

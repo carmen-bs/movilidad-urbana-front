@@ -1,6 +1,5 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
@@ -9,7 +8,6 @@ import AforosPage from "./pages/AforosPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
-const queryClient = new QueryClient();
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -25,12 +23,12 @@ const PrivateRoute = ({ children }) => {
   return children;
 };
 const App = () => (
-  <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Sonner />
         <BrowserRouter>
-            {/* Protegemos rutas */}          <Routes>
+            {/* Protegemos rutas */}          
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/mapa" element={<PrivateRoute><HomePage /></PrivateRoute>} />
@@ -41,7 +39,6 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
-  </QueryClientProvider>
 );
 
 export default App;
