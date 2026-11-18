@@ -40,6 +40,34 @@ El proyecto permite seleccionar una ciudad, elegir lugares que se quieren visita
 
 ---
 
+## 📸 Capturas de pantalla
+
+### - Autenticación
+
+La aplicación cuenta con acceso mediante Google para autenticar a los usuarios de forma rápida y segura.
+
+<p align="center">
+  <img src="screenshots/login-movilidad.png" alt="Pantalla de inicio de sesión de Movilidad Urbana" width="850">
+</p>
+
+### - Gestión de itinerarios
+
+La plataforma permite seleccionar una ciudad, elegir varios lugares de interés y generar diferentes itinerarios optimizados según el medio de transporte.
+
+<p align="center">
+  <img src="screenshots/itinerarios.png" alt="Pantalla de generación de itinerarios" width="850">
+</p>
+
+### - Gestión de aforos
+
+La sección de aforos muestra la concentración estimada de personas por zonas, junto con datos descriptivos y predicciones de afluencia.
+
+<p align="center">
+  <img src="screenshots/aforos.png" alt="Pantalla de gestión de aforos" width="850">
+</p>
+
+---
+
 ## 🛠️ Tecnologías utilizadas
 
 ### Frontend
