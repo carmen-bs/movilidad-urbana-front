@@ -54,10 +54,19 @@ La aplicación cuenta con acceso mediante Google para autenticar a los usuarios 
 
 La plataforma permite seleccionar una ciudad, elegir varios lugares de interés y generar diferentes itinerarios optimizados según el medio de transporte.
 
+
 <p align="center">
-  <img src="screenshots/itinerarios-1.png" width="420" alt="Itinerario 1">
-  <img src="screenshots/itinerarios-2.png" width="420" alt="Itinerario 2">
+  <img src="screenshots/itinerarios-1.png"
+       alt="Pantalla de selección de itinerarios"
+       width="900">
 </p>
+
+<p align="center">
+  <img src="screenshots/itinerarios-2.png"
+       alt="Itinerario generado con rutas y paradas"
+       width="900">
+</p>
+
 
 ### - Gestión de aforos
 
