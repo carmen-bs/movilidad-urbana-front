@@ -11,7 +11,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Funcion inicio de sesion, sin limataciones de acceso a usuarios 
+  // Funcion inicio de sesion con Google Firebase. 
   const handleFirebaseLogin = async () => {
   setLoading(true);
   setError("");

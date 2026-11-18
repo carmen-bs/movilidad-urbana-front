@@ -91,10 +91,6 @@ const AforosMap = ({ city, date, hour }) => {
           aforos.map((aforo) => [aforo.distrito, aforo.personas])
         );
 
-        console.log("Aforos recibidos:", aforos);
-        console.log("Aforos por distrito:", aforosPorDistrito);
-        console.log("AFOROS API:", aforos);
-
         // Elimina la capa anterior
         if (geoJsonLayerRef.current) {
           geoJsonLayerRef.current.remove();
